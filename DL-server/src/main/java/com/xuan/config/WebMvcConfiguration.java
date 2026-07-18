@@ -2,6 +2,7 @@ package com.xuan.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xuan.interceptor.JwtTokenAdminInterceptor;
+import com.xuan.interceptor.SecurityContextToBaseContextInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.List;
 public class WebMvcConfiguration implements WebMvcConfigurer {
 
     private final JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
+    private final SecurityContextToBaseContextInterceptor securityContextToBaseContextInterceptor;
     private final ObjectMapper objectMapper;
 
     /**
@@ -33,11 +35,16 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(jwtTokenAdminInterceptor)
-                .addPathPatterns("/admin/**")
-                .excludePathPatterns("/admin/admin/login")
-                .excludePathPatterns("/admin/admin/sendCode")
-                .excludePathPatterns("/admin/admin/logout");
+        // 旧的 JWT 拦截器已由 Spring Security Resource Server 接管，阶段三再彻底删除
+        // registry.addInterceptor(jwtTokenAdminInterceptor)
+        //         .addPathPatterns("/admin/**")
+        //         .excludePathPatterns("/admin/admin/login")
+        //         .excludePathPatterns("/admin/admin/sendCode")
+        //         .excludePathPatterns("/admin/admin/logout");
+
+        // 过渡拦截器：将 Spring Security 认证上下文同步到 BaseContext，供旧业务代码使用
+        registry.addInterceptor(securityContextToBaseContextInterceptor)
+                .addPathPatterns("/admin/**");
 
         // API 响应禁止 CDN/浏览器缓存，防止 GET 请求返回过期数据
         registry.addInterceptor(new HandlerInterceptor() {

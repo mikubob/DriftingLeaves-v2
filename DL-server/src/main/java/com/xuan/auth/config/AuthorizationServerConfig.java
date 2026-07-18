@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -72,22 +71,6 @@ public class AuthorizationServerConfig {
                         .accessTokenRequestConverter(adminPasswordCodeAuthenticationConverter)
                         .authenticationProvider(adminPasswordCodeAuthenticationProvider)
                 );
-        return http.build();
-    }
-
-    /**
-     * 默认安全过滤器链（非授权服务器端点）
-     * 必须显式声明，否则 Resource Server 自动配置会创建一个拦截所有请求的过滤器链
-     */
-    @Bean
-    @Order(2)
-    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authorizeHttpRequests(authorize -> authorize
-                        .anyRequest().permitAll()
-                )
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         return http.build();
     }
 
