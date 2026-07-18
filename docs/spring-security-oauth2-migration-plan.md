@@ -75,7 +75,7 @@
 | 作者设计 | 无 | 新增 `article_authors` 多对多关联表，支持邀请、编辑权限、角色 |
 | 审核记录 | 无 | 新增 `article_audit_logs` 表记录每次状态变更 |
 
-> **完整 SQL 见**：[security-redesign-schema-v2.sql](file:///d:/CodingFiles/Blog/DriftingLeaves-Website/Backend/docs/security-redesign-schema-v2.sql)
+> **完整 SQL 见**：[security-redesign-schema-v2.sql](file:///d:/CodingFiles/Blog/DriftingLeaves-v2/docs/security-redesign-schema-v2.sql)
 
 ### 2.3 登录流程对比
 
@@ -139,7 +139,7 @@ mysqldump -u root -p DriftingLeaves > drifting_leaves_backup_$(date +%Y%m%d).sql
 
 #### 步骤 2：执行新 SQL
 
-直接执行 [security-redesign-schema-v2.sql](file:///d:/CodingFiles/Blog/DriftingLeaves-Website/Backend/docs/security-redesign-schema-v2.sql)。
+直接执行 [security-redesign-schema-v2.sql](file:///d:/CodingFiles/Blog/DriftingLeaves-v2/docs/security-redesign-schema-v2.sql)。
 
 该 SQL 会：
 - 删除 `admin` 表
@@ -201,10 +201,10 @@ END;
 
 ### 4.3 本阶段验收标准
 
-- [ ] 新 SQL 能成功执行
-- [ ] 所有新实体和 Mapper 能正常编译
-- [ ] 项目能正常启动（此时认证还未接入，可暂时关闭 Security 自动配置）
-- [ ] 历史匿名数据已清理
+- [x] 新 SQL 能成功执行
+- [x] 所有新实体和 Mapper 能正常编译
+- [x] 项目能正常启动（此时认证还未接入，可暂时关闭 Security 自动配置）
+- [x] 历史匿名数据已清理
 
 ---
 
@@ -233,6 +233,19 @@ END;
 </dependency>
 ```
 
+> 当前项目已完成依赖添加，无需重复操作。
+
+### 5.2.1 阶段二拆分与推进顺序
+
+为避免一次性改动过大，阶段二拆为两个可独立验收的子阶段。每完成一个子阶段都要编译、启动、自测通过后再继续。
+
+| 子阶段 | 目标 | 关键产物 | 验收接口 |
+|--------|------|---------|---------|
+| 第一部分 | 最小授权服务器跑通 | `AuthorizationServerConfig`、自定义 Grant Type、JWKS | `/oauth2/jwks`、`/oauth2/token` |
+| 第二部分 | Resource Server 最小接入 | `ResourceServerConfig`、`application.yml` 追加 issuer-uri | 任意 `/admin/**` 接口 |
+
+Cookie 下发由阶段三方案 A 接管，阶段二只验证 Token 能以 JSON 形式正常返回。
+
 ### 5.3 执行步骤
 
 #### 步骤 1：创建授权服务器配置
@@ -252,7 +265,12 @@ public class AuthorizationServerConfig {
             throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-            .oidc(Customizer.withDefaults());
+            .oidc(Customizer.withDefaults())
+            // 注册自定义 grant type 的转换器和认证提供者
+            .tokenEndpoint(tokenEndpoint -> tokenEndpoint
+                .accessTokenRequestConverter(adminPasswordCodeAuthenticationConverter())
+                .authenticationProvider(adminPasswordCodeAuthenticationProvider())
+            );
         return http.build();
     }
 
@@ -289,17 +307,60 @@ public class AuthorizationServerConfig {
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
-            .issuer("http://localhost:8080")
+            .issuer("http://localhost:5922")
             .build();
+    }
+
+    @Bean
+    public AdminPasswordCodeAuthenticationConverter adminPasswordCodeAuthenticationConverter() {
+        return new AdminPasswordCodeAuthenticationConverter();
+    }
+
+    @Bean
+    public AdminPasswordCodeAuthenticationProvider adminPasswordCodeAuthenticationProvider(
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder,
+            VerifyCodeService verifyCodeService) {
+        return new AdminPasswordCodeAuthenticationProvider(userDetailsService, passwordEncoder, verifyCodeService);
+    }
+}
+```
+
+同时新建 `DL-server/src/main/java/com/xuan/auth/util/Jwks.java`：
+
+```java
+public final class Jwks {
+
+    private Jwks() {}
+
+    public static RSAKey generateRsa() {
+        KeyPair keyPair = generateRsaKey();
+        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+        RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
+        return new RSAKey.Builder(publicKey)
+            .privateKey(privateKey)
+            .keyID(UUID.randomUUID().toString())
+            .build();
+    }
+
+    private static KeyPair generateRsaKey() {
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            return keyPairGenerator.generateKeyPair();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("生成 RSA 密钥对失败", e);
+        }
     }
 }
 ```
 
 #### 步骤 2：初始化 OAuth2 客户端
 
-执行以下 SQL 插入客户端：
+本阶段一次性预置 `admin-client`（管理端）和 `blog-client`（博客端），避免阶段四再次修改数据库。执行以下 SQL：
 
 ```sql
+-- admin-client：用于管理端用户名/密码/验证码登录
 INSERT INTO oauth2_registered_client (
     id, client_id, client_id_issued_at, client_secret, client_name,
     client_authentication_methods, authorization_grant_types, redirect_uris,
@@ -311,14 +372,57 @@ INSERT INTO oauth2_registered_client (
     '{bcrypt}$2a$10$...',  -- 用 BCryptPasswordEncoder 生成
     'Admin Client',
     'client_secret_basic',
-    'password,refresh_token',
+    'admin_password_code,refresh_token',
     '',
     '',
     'openid,profile,admin',
     '{"requireProofKey":false,"requireAuthorizationConsent":false}',
     '{"accessTokenTimeToLive":"30m","refreshTokenTimeToLive":"7d","reuseRefreshTokens":false}'
 );
+
+-- blog-client：预留用于阶段四博客端邮箱验证码登录、GitHub/Gitee 登录
+INSERT INTO oauth2_registered_client (
+    id, client_id, client_id_issued_at, client_secret, client_name,
+    client_authentication_methods, authorization_grant_types, redirect_uris,
+    post_logout_redirect_uris, scopes, client_settings, token_settings
+) VALUES (
+    'blog-client-uuid',
+    'blog-client',
+    NOW(),
+    '{bcrypt}$2a$10$...',  -- 用 BCryptPasswordEncoder 生成
+    'Blog Client',
+    'client_secret_basic',
+    'authorization_code,refresh_token',
+    'http://localhost:5173/login/oauth2/code/blog-client',
+    'http://localhost:5173',
+    'openid,profile,user',
+    '{"requireProofKey":true,"requireAuthorizationConsent":false}',
+    '{"accessTokenTimeToLive":"30m","refreshTokenTimeToLive":"7d","reuseRefreshTokens":false}'
+);
 ```
+
+> 注意：`admin_password_code` 是本项目自定义的 grant type，不是 OAuth2 标准 grant。管理端内网使用，博客端后续使用 `authorization_code` + PKCE。
+
+**生成 client_secret 和初始 admin 密码**
+
+临时写一个测试类生成 BCrypt 密文（实际密码请自行替换）：
+
+```java
+@Test
+void generateBcrypt() {
+    BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    System.out.println(encoder.encode("admin-client-secret"));
+    System.out.println(encoder.encode("blog-client-secret"));
+    System.out.println(encoder.encode("admin-password"));
+}
+```
+
+将输出填入对应位置：
+
+- `oauth2_registered_client.client_secret`：在生成的 `$2a$10$...` 前加上 `{bcrypt}` 前缀，即 `{bcrypt}$2a$10$...`
+- `sys_user.password`：直接存储生成的 `$2a$10$...`（无 `{bcrypt}` 前缀）
+
+> 注意：SAS 使用 `DelegatingPasswordEncoder` 解析 `client_secret`，要求存储值带 `{bcrypt}` 前缀；`sys_user.password` 由全局 `PasswordEncoder`（BCrypt）直接匹配，不需要前缀。
 
 #### 步骤 3：实现 UserDetailsService
 
@@ -351,80 +455,342 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 }
 ```
 
+需要在对应 Mapper 中补充方法：
+
+**`SysUserMapper.java`**
+
+```java
+@Mapper
+public interface SysUserMapper extends BaseMapper<SysUser> {
+    SysUser selectByUsername(@Param("username") String username);
+}
+```
+
+**`SysUserMapper.xml`**（若不存在则新建 `DL-server/src/main/resources/mapper/SysUserMapper.xml`）
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xuan.mapper.SysUserMapper">
+
+    <select id="selectByUsername" resultType="com.xuan.entity.SysUser">
+        SELECT * FROM sys_user WHERE username = #{username} LIMIT 1
+    </select>
+
+</mapper>
+```
+
+**`SysUserRoleMapper.java`**
+
+```java
+@Mapper
+public interface SysUserRoleMapper extends BaseMapper<SysUserRole> {
+    List<String> selectRoleCodesByUserId(@Param("userId") Long userId);
+}
+```
+
+**`SysUserRoleMapper.xml`**
+
+```xml
+<select id="selectRoleCodesByUserId" resultType="java.lang.String">
+    SELECT r.role_code
+    FROM sys_role r
+    INNER JOIN sys_user_role ur ON ur.role_id = r.id
+    WHERE ur.user_id = #{userId}
+</select>
+```
+
 #### 步骤 4：创建 SecurityUser
 
 新建文件：`DL-server/src/main/java/com/xuan/auth/security/SecurityUser.java`
 
 ```java
+@Getter
+@AllArgsConstructor
 public class SecurityUser implements UserDetails {
-    private Long userId;
-    private String username;
-    private String password;
-    private Integer userType;
-    private String nickname;
-    private Collection<? extends GrantedAuthority> authorities;
-    // 实现 UserDetails 接口方法
+
+    private final Long userId;
+    private final String username;
+    private final String password;
+    private final Integer userType;
+    private final String nickname;
+    private final Collection<? extends GrantedAuthority> authorities;
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities;
+    }
+
+    @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
+    public String getUsername() {
+        return username;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
 }
 ```
 
-#### 步骤 5：实现管理员双因素认证 Provider
+#### 步骤 5：实现自定义 Grant Type 认证模型
 
-新建文件：`DL-server/src/main/java/com/xuan/auth/security/AdminAuthenticationProvider.java`
+新建文件：`DL-server/src/main/java/com/xuan/auth/security/AdminPasswordCodeAuthenticationToken.java`
+
+```java
+public class AdminPasswordCodeAuthenticationToken extends AbstractAuthenticationToken {
+
+    private final Object principal;      // username
+    private final Object credentials;    // password
+    private final String code;           // 邮箱验证码
+
+    public AdminPasswordCodeAuthenticationToken(String username, String password, String code) {
+        super(null);
+        this.principal = username;
+        this.credentials = password;
+        this.code = code;
+        setAuthenticated(false);
+    }
+
+    public AdminPasswordCodeAuthenticationToken(UserDetails userDetails, String code,
+                                                Collection<? extends GrantedAuthority> authorities) {
+        super(authorities);
+        this.principal = userDetails;
+        this.credentials = null;
+        this.code = code;
+        super.setAuthenticated(true);
+    }
+
+    @Override
+    public Object getCredentials() {
+        return credentials;
+    }
+
+    @Override
+    public Object getPrincipal() {
+        return principal;
+    }
+
+    public String getCode() {
+        return code;
+    }
+}
+```
+
+新建文件：`DL-server/src/main/java/com/xuan/auth/security/AdminPasswordCodeAuthenticationConverter.java`
+
+```java
+public class AdminPasswordCodeAuthenticationConverter implements AuthenticationConverter {
+
+    @Override
+    public Authentication convert(HttpServletRequest request) {
+        String grantType = request.getParameter(OAuth2ParameterNames.GRANT_TYPE);
+        if (!"admin_password_code".equals(grantType)) {
+            return null;
+        }
+
+        String username = request.getParameter(OAuth2ParameterNames.USERNAME);
+        String password = request.getParameter(OAuth2ParameterNames.PASSWORD);
+        String code = request.getParameter("code");
+
+        return new AdminPasswordCodeAuthenticationToken(username, password, code);
+    }
+}
+```
+
+新建文件：`DL-server/src/main/java/com/xuan/auth/security/AdminPasswordCodeAuthenticationProvider.java`
 
 ```java
 @Component
 @RequiredArgsConstructor
-public class AdminAuthenticationProvider implements AuthenticationProvider {
+public class AdminPasswordCodeAuthenticationProvider implements AuthenticationProvider {
 
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final VerifyCodeService verifyCodeService;
 
     @Override
-    public Authentication authenticate(Authentication authentication) {
-        String username = authentication.getName();
-        String password = (String) authentication.getCredentials();
-        String code = authentication.getDetails().toString(); // 验证码
+    public Authentication authenticate(Authentication authentication)
+            throws AuthenticationException {
+        AdminPasswordCodeAuthenticationToken token =
+            (AdminPasswordCodeAuthenticationToken) authentication;
 
-        UserDetails user = userDetailsService.loadUserByUsername(username);
-        // 校验密码
-        // 校验验证码（管理员才需要）
-        // 返回 Authentication
+        String username = (String) token.getPrincipal();
+        String password = (String) token.getCredentials();
+        String code = token.getCode();
+
+        // 1. 加载用户
+        SecurityUser user = (SecurityUser) userDetailsService.loadUserByUsername(username);
+
+        // 2. 校验密码
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BadCredentialsException("用户名或密码错误");
+        }
+
+        // 3. 校验邮箱验证码（管理员双因素认证）
+        if (!verifyCodeService.verifyCode(user.getUserId(), code)) {
+            throw new BadCredentialsException("验证码错误或已过期");
+        }
+
+        // 4. 返回认证成功的 Token
+        return new AdminPasswordCodeAuthenticationToken(
+            user, code, user.getAuthorities());
+    }
+
+    @Override
+    public boolean supports(Class<?> authentication) {
+        return AdminPasswordCodeAuthenticationToken.class.isAssignableFrom(authentication);
     }
 }
 ```
 
-#### 步骤 6：配置 Spring Security 使用自定义 Provider
+> 注意：验证码作为自定义 Token 的正式属性传递，不再依赖 `authentication.getDetails()`，避免在 SAS 处理链中丢失。
+
+#### 步骤 6：将用户角色写入 JWT
+
+新建文件：`DL-server/src/main/java/com/xuan/auth/config/JwtCustomizerConfig.java`
+
+```java
+@Configuration
+public class JwtCustomizerConfig {
+
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+        return context -> {
+            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+                Set<String> roles = context.getPrincipal().getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toSet());
+                context.getClaims().claim("roles", roles);
+            }
+        };
+    }
+}
+```
+
+Resource Server 端配合：
 
 ```java
 @Bean
-public AuthenticationManager authenticationManager(
-        AdminAuthenticationProvider adminProvider,
-        EmailCodeAuthenticationProvider emailCodeProvider,
-        DaoAuthenticationProvider daoProvider) {
-    return new ProviderManager(adminProvider, emailCodeProvider, daoProvider);
+public JwtAuthenticationConverter jwtAuthenticationConverter() {
+    JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+    authoritiesConverter.setAuthorityPrefix("ROLE_");
+    authoritiesConverter.setAuthoritiesClaimName("roles");
+
+    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+    converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+    converter.setPrincipalClaimName("sub");
+    return converter;
 }
 ```
 
-#### 步骤 7：配置 Token 通过 Cookie 下发
+#### 步骤 7：阶段二验收目标
 
-实现 `CustomCookieAuthenticationSuccessHandler`，在登录成功后：
-
-```java
-@Override
-public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                    Authentication authentication) {
-    // 从 OAuth2Authorization 中获取 AccessToken 和 RefreshToken
-    // 写入 HttpOnly Cookie
-}
-```
+本阶段 `/oauth2/token` 端点默认返回 JSON（含 AccessToken 和 RefreshToken）。Token 通过 HttpOnly Cookie 下发的细节在**阶段三**通过**方案 A（自定义 SAS Token Endpoint successHandler）**实现，前端适配也放到阶段五统一处理。
 
 ### 5.4 本阶段验收标准
 
-- [ ] `POST /oauth2/token` 能返回 AccessToken 和 RefreshToken
-- [ ] 登录成功后 Cookie 中能看到 token
 - [ ] `/oauth2/jwks` 能返回公钥集
+- [ ] `POST /oauth2/token` 携带 `grant_type=admin_password_code`、`client_id=admin-client`、用户名/密码/验证码，能返回 AccessToken 和 RefreshToken
+- [ ] 返回的 JWT AccessToken 中包含 `roles` claim
 - [ ] 错误的用户名/密码/验证码返回 401
+- [ ] `oauth2_registered_client` 表中已预置 `admin-client` 和 `blog-client`
+- [ ] 项目能正常启动且不报 SecurityFilterChain 冲突
+
+### 5.5 阶段二自测脚本
+
+**1. 编译打包**
+
+```bash
+mvn clean package -pl DL-server -am
+```
+
+> 若本地 Maven install 到仓库时偶发 `.tmp` 文件重命名失败，可改用 `mvn clean package` 后 `java -jar DL-server/target/DL-server-1.0-SNAPSHOT.jar` 启动。
+
+**2. 启动服务**
+
+```bash
+java -jar DL-server/target/DL-server-1.0-SNAPSHOT.jar
+```
+
+**3. 测试 JWKS 端点**
+
+```bash
+curl http://localhost:5922/oauth2/jwks
+```
+
+期望返回包含 `keys` 数组的 JSON。
+
+**4. 测试 Token 端点（正确账号）**
+
+```bash
+curl -X POST http://localhost:5922/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "admin-client:admin-client-secret" \
+  -d "grant_type=admin_password_code" \
+  -d "username=admin" \
+  -d "password=admin-password" \
+  -d "code=123456"
+```
+
+> `admin-client-secret` 和 `admin-password` 需要替换为实际生成的明文密码。`code` 需要替换为通过 `/admin/admin/sendCode` 发送的真实验证码，或先关闭验证码校验用于本地联调。
+
+期望返回：
+
+```json
+{
+  "access_token": "eyJraWQ...",
+  "refresh_token": "...",
+  "token_type": "Bearer",
+  "expires_in": 1800,
+  "scope": "openid profile admin"
+}
+```
+
+**5. 解码 JWT 验证 roles claim**
+
+将 `access_token` 复制到 [jwt.io](https://jwt.io) 或使用本地工具解码，验证 payload 中包含：
+
+```json
+{
+  "roles": ["ROLE_ADMIN"]
+}
+```
+
+**6. 测试错误凭证**
+
+```bash
+curl -X POST http://localhost:5922/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "admin-client:admin-client-secret" \
+  -d "grant_type=admin_password_code" \
+  -d "username=admin" \
+  -d "password=wrong-password" \
+  -d "code=123456"
+```
+
+期望返回 HTTP 401。
 
 ---
 
@@ -433,6 +799,7 @@ public void onAuthenticationSuccess(HttpServletRequest request, HttpServletRespo
 ### 6.1 目标
 
 - 业务服务接入 OAuth2 Resource Server
+- 实现 Token 通过 HttpOnly Cookie 下发（方案 A）
 - 删除旧的 JWT 拦截器
 - 管理员后台接口使用 `@PreAuthorize`
 - 游客账号只读权限生效
@@ -456,6 +823,7 @@ public class ResourceServerConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(new CookieBearerTokenResolver())
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
                 .accessDeniedHandler(new CustomAccessDeniedHandler())
@@ -490,16 +858,129 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080
+          issuer-uri: http://localhost:5922
 ```
 
-#### 步骤 3：删除旧认证逻辑
+#### 步骤 3：配置 Token 通过 HttpOnly Cookie 下发（方案 A）
+
+**方案 A：自定义 SAS Token Endpoint 的 successHandler**
+
+SAS 的 `/oauth2/token` 端点默认返回 JSON。为了兼容前端现有 Cookie 登录方式，在 Token 签发成功后拦截响应，将 AccessToken 和 RefreshToken 写入 HttpOnly Cookie，同时保留 JSON 响应体。
+
+涉及文件：
+
+- 新建 `DL-server/src/main/java/com/xuan/auth/security/OAuth2TokenResponseCookieHandler.java`
+- 修改 `DL-server/src/main/java/com/xuan/auth/config/AuthorizationServerConfig.java`
+
+实现思路：
+
+```java
+public class OAuth2TokenResponseCookieHandler implements AuthenticationSuccessHandler {
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                                        Authentication authentication)
+            throws IOException, ServletException {
+
+        OAuth2AccessTokenAuthenticationToken token =
+            (OAuth2AccessTokenAuthenticationToken) authentication;
+
+        OAuth2AccessToken accessToken = token.getAccessToken();
+        OAuth2RefreshToken refreshToken = token.getRefreshToken();
+
+        // AccessToken 写入 HttpOnly Cookie
+        addTokenCookie(response, "access_token", accessToken.getTokenValue(),
+            Duration.between(Instant.now(), accessToken.getExpiresAt()).getSeconds(), false);
+
+        // RefreshToken 写入 HttpOnly Cookie
+        if (refreshToken != null) {
+            addTokenCookie(response, "refresh_token", refreshToken.getTokenValue(),
+                7 * 24 * 3600, false);
+        }
+
+        // 继续走默认的 JSON 响应，保证前后端都能拿到 Token
+        OAuth2AccessTokenResponse accessTokenResponse = OAuth2AccessTokenResponse.withToken(accessToken.getTokenValue())
+            .tokenType(accessToken.getTokenType())
+            .expiresIn(ChronoUnit.SECONDS.between(Instant.now(), accessToken.getExpiresAt()))
+            .refreshToken(refreshToken != null ? refreshToken.getTokenValue() : null)
+            .scopes(accessToken.getScopes())
+            .build();
+
+        new OAuth2AccessTokenResponseHttpMessageConverter().write(
+            accessTokenResponse, null, new ServletServerHttpResponse(response));
+    }
+
+    private void addTokenCookie(HttpServletResponse response, String name, String value,
+                                long maxAgeSeconds, boolean secure) {
+        String encoded = URLEncoder.encode(value, StandardCharsets.UTF_8);
+        String secureFlag = secure ? "; Secure" : "";
+        response.addHeader("Set-Cookie",
+            String.format("%s=%s; Max-Age=%d; Path=/; HttpOnly%s; SameSite=Strict",
+                name, encoded, maxAgeSeconds, secureFlag));
+    }
+}
+```
+
+在 `AuthorizationServerConfig` 中注册：
+
+```java
+http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
+    .oidc(Customizer.withDefaults())
+    .tokenEndpoint(tokenEndpoint -> tokenEndpoint
+        .accessTokenRequestConverter(adminPasswordCodeAuthenticationConverter())
+        .authenticationProvider(adminPasswordCodeAuthenticationProvider())
+        .accessTokenResponseHandler(new OAuth2TokenResponseCookieHandler())
+    );
+```
+
+> 说明：Resource Server 默认从 `Authorization` Header 读取 Token。若要让其同时支持从 Cookie 读取 `access_token`，需要自定义 `BearerTokenResolver`：
+
+```java
+public class CookieBearerTokenResolver implements BearerTokenResolver {
+
+    private final BearerTokenResolver defaultResolver = new DefaultBearerTokenResolver();
+
+    @Override
+    public String resolve(HttpServletRequest request) {
+        // 优先从 Header 解析
+        String token = defaultResolver.resolve(request);
+        if (StringUtils.hasText(token)) {
+            return token;
+        }
+        // 其次从 Cookie 解析
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("access_token".equals(cookie.getName())) {
+                    return URLDecoder.decode(cookie.getValue(), StandardCharsets.UTF_8);
+                }
+            }
+        }
+        return null;
+    }
+}
+```
+
+在 `ResourceServerConfig` 中注册：
+
+```java
+.oauth2ResourceServer(oauth2 -> oauth2
+    .bearerTokenResolver(new CookieBearerTokenResolver())
+    .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+    .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
+    .accessDeniedHandler(new CustomAccessDeniedHandler())
+)
+```
+
+> 如果 SAS 3.x 的 `accessTokenResponseHandler` 扩展点不可用，则回退到方案 B：保留 `/admin/admin/login` Controller，内部调用 `/oauth2/token` 后写 Cookie。
+
+#### 步骤 4：删除旧认证逻辑
 
 - 删除 `JwtTokenAdminInterceptor.java`
 - 在 `WebMvcConfiguration.java` 中移除拦截器注册
 - 保留 CORS 配置
 
-#### 步骤 4：改造管理员 Controller
+#### 步骤 5：改造管理员 Controller
 
 以 `AdminController.java` 为例：
 
@@ -522,7 +1003,7 @@ public class AdminController {
 }
 ```
 
-#### 步骤 5：游客只读权限
+#### 步骤 6：游客只读权限
 
 ```java
 @PreAuthorize("hasRole('ADMIN') or (hasRole('VISITOR') and #request.method == 'GET')")
@@ -531,13 +1012,15 @@ public Result<?> someAdminEndpoint(HttpServletRequest request) {
 }
 ```
 
-#### 步骤 6：改造操作日志
+#### 步骤 7：改造操作日志
 
 - `OperationLogAspect.java` 中 `admin_id` 改为从 `SecurityContextHolder` 取 `user_id`
 - `OperationLogs` 实体 `adminId` 字段改为 `userId`
 
 ### 6.3 本阶段验收标准
 
+- [ ] `/oauth2/token` 返回 JSON 的同时，Response Header 中携带 `Set-Cookie: access_token=...; HttpOnly`
+- [ ] Resource Server 能从 Cookie 中解析 access_token
 - [ ] 旧拦截器已删除
 - [ ] 未登录访问 `/admin/**` 返回 401
 - [ ] 游客访问非 GET 后台接口返回 403
@@ -1012,7 +1495,7 @@ feat(security): 阶段一完成数据库改造和实体生成
 本次改造分为 **5 个阶段**，从数据库到授权服务器，再到资源服务器、博客端登录、前端适配，逐步将项目从私有 JWT 方案迁移到标准 OAuth2.1/OIDC 体系。
 
 核心文件位置：
-- 数据库 SQL：[security-redesign-schema-v2.sql](file:///d:/CodingFiles/Blog/DriftingLeaves-Website/Backend/docs/security-redesign-schema-v2.sql)
+- 数据库 SQL：[security-redesign-schema-v2.sql](file:///d:/CodingFiles/Blog/DriftingLeaves-v2/docs/security-redesign-schema-v2.sql)
 - 架构设计文档：本文件
 
 建议按阶段顺序执行，每阶段验收通过后再进入下一阶段。
