@@ -44,14 +44,8 @@ public class MessageVO implements Serializable {
     // 是否Markdown
     private Integer isMarkdown;
 
-    // 访客ID
-    private Long visitorId;
-
-    // 昵称
-    private String nickname;
-
-    // 邮箱或QQ
-    private String emailOrQq;
+    // 留言用户ID
+    private Long userId;
 
     // 地区
     private String location;

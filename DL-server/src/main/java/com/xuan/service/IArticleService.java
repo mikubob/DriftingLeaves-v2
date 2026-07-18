@@ -53,11 +53,11 @@ public interface IArticleService extends IService<Articles> {
     void batchDelete(List<Long> ids);
 
     /**
-     * 发布/取消发布文章
-     * @param id
-     * @param isPublished
+     * 更新文章状态
+     * @param id 文章ID
+     * @param status 文章状态：0草稿 1待审核 2已发布 3违规
      */
-    void publishOrCancel(Long id, Integer isPublished);
+    void updateStatus(Long id, Integer status);
 
     /**
      * 置顶/取消置顶文章

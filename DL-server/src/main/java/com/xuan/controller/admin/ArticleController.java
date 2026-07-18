@@ -93,16 +93,16 @@ public class ArticleController {
     }
 
     /**
-     * 发布/取消发布文章
-     * @param id
-     * @param isPublished 0-取消发布，1-发布
+     * 更新文章状态
+     * @param id 文章ID
+     * @param status 文章状态：0草稿 1待审核 2已发布 3违规
      * @return
      */
-    @PutMapping("/publish/{id}")
+    @PutMapping("/status/{id}")
     @OperationLog(value = OperationType.UPDATE, target = "article", targetId = "#id")
-    public Result publishOrCancel(@PathVariable Long id, @RequestParam Integer isPublished) {
-        log.info("发布/取消发布文章: id={}, isPublished={}", id, isPublished);
-        articleService.publishOrCancel(id, isPublished);
+    public Result updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+        log.info("更新文章状态: id={}, status={}", id, status);
+        articleService.updateStatus(id, status);
         return Result.success();
     }
 

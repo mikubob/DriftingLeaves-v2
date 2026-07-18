@@ -266,20 +266,19 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             @CacheEvict(value = "blogReport", allEntries = true),
             @CacheEvict(value = "hotArticles", allEntries = true)
     })
-    public void publishOrCancel(Long id, Integer isPublished) {
+    public void updateStatus(Long id, Integer status) {
         //1.查询文章是否存在
         Articles articles = getById(id);
         if (articles == null) {
             throw new ArticleException(MessageConstant.ARTICLE_NOT_FOUND);
         }
 
-        Integer targetStatus = StatusConstant.ENABLE.equals(isPublished) ? 2 : 0;
-        boolean firstPublishNow = Integer.valueOf(2).equals(targetStatus) && articles.getPublishTime() == null;
+        boolean firstPublishNow = Integer.valueOf(2).equals(status) && articles.getPublishTime() == null;
 
         //2.设置发布状态
         Articles updateArticle = Articles.builder()
                 .id(id)
-                .status(targetStatus)
+                .status(status)
                 .build();
 
         //3.如果为首次发布，则设置发布时间

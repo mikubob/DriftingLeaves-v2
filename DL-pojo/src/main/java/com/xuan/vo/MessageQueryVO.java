@@ -38,11 +38,8 @@ public class MessageQueryVO implements Serializable {
     // 留言内容（HTML）
     private String contentHtml;
 
-    // 昵称
-    private String nickname;
-
-    // 邮箱或QQ
-    private String emailOrQq;
+    // 留言用户ID
+    private Long userId;
 
     // 地区
     private String location;
