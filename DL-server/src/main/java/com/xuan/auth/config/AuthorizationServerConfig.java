@@ -2,7 +2,9 @@ package com.xuan.auth.config;
 
 import com.xuan.auth.security.AdminPasswordCodeAuthenticationConverter;
 import com.xuan.auth.security.AdminPasswordCodeAuthenticationProvider;
+import com.xuan.auth.security.OAuth2TokenResponseCookieHandler;
 import com.xuan.auth.util.Jwks;
+import org.springframework.security.oauth2.server.authorization.web.authentication.OAuth2AccessTokenResponseAuthenticationSuccessHandler;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
@@ -57,6 +59,16 @@ public class AuthorizationServerConfig {
 
     /**
      * 授权服务器安全过滤器链
+     * <p>
+     * 通过 @Order(1) 优先级高于 Resource Server 链，确保 /oauth2/** 端点优先被本链处理。
+     * </p>
+     *
+     * <h3>核心配置</h3>
+     * <ul>
+     *     <li>{@code applyDefaultSecurity(http)}：注册 SAS 默认安全配置（含 OIDC 端点）</li>
+     *     <li>{@code tokenEndpoint}：注册自定义 grant_type 的转换器和认证提供者</li>
+     *     <li>{@code accessTokenResponseHandler}：注册 Token Cookie 下发处理器（步骤 6 新增）</li>
+     * </ul>
      */
     @Bean
     @Order(1)
@@ -70,6 +82,11 @@ public class AuthorizationServerConfig {
                 .tokenEndpoint(tokenEndpoint -> tokenEndpoint
                         .accessTokenRequestConverter(adminPasswordCodeAuthenticationConverter)
                         .authenticationProvider(adminPasswordCodeAuthenticationProvider)
+                        // 注册 Token 响应 Cookie 处理器：在默认 JSON 响应基础上追加 HttpOnly Cookie 下发
+                        // 包装模式：OAuth2TokenResponseCookieHandler 内部委托给默认的
+                        // OAuth2AccessTokenResponseAuthenticationSuccessHandler 输出 JSON 响应体
+                        .accessTokenResponseHandler(new OAuth2TokenResponseCookieHandler(
+                                new OAuth2AccessTokenResponseAuthenticationSuccessHandler()))
                 );
         return http.build();
     }

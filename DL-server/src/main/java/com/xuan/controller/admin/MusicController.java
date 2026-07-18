@@ -12,17 +12,23 @@ import com.xuan.service.IMusicService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
  * 管理端音乐接口
+ * <p>
+ * 类级 @PreAuthorize：仅 ADMIN + AUDITOR 可访问。AUTHOR 角色被排除（仅能操作文章模块）。
+ * 写操作方法（POST/PUT/DELETE）在方法级再追加 @PreAuthorize("hasRole('ADMIN')") 排除 AUDITOR。
+ * </p>
  */
 @Slf4j
 @RestController("adminMusicController")
 @RequestMapping("/admin/music")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
 public class MusicController {
 
     private final IMusicService musicService;
@@ -57,6 +63,7 @@ public class MusicController {
      * @return
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.INSERT, target = "music")
     public Result addMusic(@Valid @RequestBody MusicDTO musicDTO) {
         log.info("添加音乐,{}", musicDTO);
@@ -70,6 +77,7 @@ public class MusicController {
      * @return
      */
     @PutMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.UPDATE, target = "music", targetId = "#musicDTO.id")
     public Result updateMusic(@Valid @RequestBody MusicDTO musicDTO) {
         log.info("更新音乐,{}", musicDTO);
@@ -83,6 +91,7 @@ public class MusicController {
      * @return
      */
     @DeleteMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.DELETE, target = "music", targetId = "#ids")
     public Result deleteMusic(@RequestParam List<Long> ids) {
         log.info("批量删除音乐,{}", ids);

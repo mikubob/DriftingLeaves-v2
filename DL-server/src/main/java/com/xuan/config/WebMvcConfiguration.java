@@ -1,8 +1,6 @@
 package com.xuan.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xuan.interceptor.JwtTokenAdminInterceptor;
-import com.xuan.interceptor.SecurityContextToBaseContextInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,35 +16,53 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 /**
- * 配置类，注册web层相关组件
+ * Web MVC 配置类
+ * <p>
+ * 注册 Web 层相关组件：拦截器、跨域支持、消息转换器。
+ * </p>
+ *
+ * <h3>阶段三改造说明</h3>
+ * <p>
+ * 已彻底移除以下旧组件的引用：
+ * </p>
+ * <ul>
+ *     <li>{@code JwtTokenAdminInterceptor}：旧的 JWT 拦截器，已由 Spring Security Resource Server 接管</li>
+ *     <li>{@code SecurityContextToBaseContextInterceptor}：过渡期同步 SecurityContext → BaseContext 的拦截器，
+ *         阶段三完全移除 BaseContext 后随之删除</li>
+ * </ul>
+ *
+ * <h3>跨域配置说明</h3>
+ * <p>
+ * {@code allowCredentials(true)} 是阶段三 Token Cookie 下发机制的必要条件：
+ * 浏览器在跨域请求携带 Cookie 时，要求响应头显式声明允许携带凭证，
+ * 否则浏览器会拒绝读取响应并丢弃 Set-Cookie 头。
+ * </p>
+ *
+ * @author xuan
  */
 @Configuration
 @Slf4j
 @RequiredArgsConstructor
 public class WebMvcConfiguration implements WebMvcConfigurer {
 
-    private final JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
-    private final SecurityContextToBaseContextInterceptor securityContextToBaseContextInterceptor;
+    /**
+     * 全局 ObjectMapper，用于自定义 JSON 序列化（如时间格式）
+     */
     private final ObjectMapper objectMapper;
 
     /**
      * 注册自定义拦截器
-     * @param registry
+     * <p>
+     * 阶段三已移除所有认证相关拦截器（JwtTokenAdminInterceptor / SecurityContextToBaseContextInterceptor），
+     * 当前仅保留 API 缓存控制拦截器。
+     * </p>
+     *
+     * @param registry 拦截器注册器
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 旧的 JWT 拦截器已由 Spring Security Resource Server 接管，阶段三再彻底删除
-        // registry.addInterceptor(jwtTokenAdminInterceptor)
-        //         .addPathPatterns("/admin/**")
-        //         .excludePathPatterns("/admin/admin/login")
-        //         .excludePathPatterns("/admin/admin/sendCode")
-        //         .excludePathPatterns("/admin/admin/logout");
-
-        // 过渡拦截器：将 Spring Security 认证上下文同步到 BaseContext，供旧业务代码使用
-        registry.addInterceptor(securityContextToBaseContextInterceptor)
-                .addPathPatterns("/admin/**");
-
         // API 响应禁止 CDN/浏览器缓存，防止 GET 请求返回过期数据
+        // 对于管理端、博客端、CV 端、首页接口均生效
         registry.addInterceptor(new HandlerInterceptor() {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -54,12 +70,21 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
                 response.setHeader("Pragma", "no-cache");
                 return true;
             }
-        }).addPathPatterns("/admin/**", "/blog/**","/cv/**","/home/**");
+        }).addPathPatterns("/admin/**", "/blog/**", "/cv/**", "/home/**");
     }
 
     /**
      * 配置跨域支持
-     * @param registry
+     * <p>
+     * 关键配置项：
+     * </p>
+     * <ul>
+     *     <li>{@code allowedOriginPatterns("*")}：允许所有源（生产环境建议指定具体域名）</li>
+     *     <li>{@code allowCredentials(true)}：允许携带凭证（Cookie），Token Cookie 模式必需</li>
+     *     <li>{@code maxAge(3600)}：预检请求缓存 1 小时，减少 OPTIONS 请求次数</li>
+     * </ul>
+     *
+     * @param registry 跨域注册器
      */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -67,13 +92,18 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
                 .allowedOriginPatterns("*")  // 允许所有源，或指定域名
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")  // 允许的HTTP方法
                 .allowedHeaders("*")
-                .allowCredentials(true)
+                .allowCredentials(true)  // 阶段三 Cookie 模式必需：允许浏览器跨域携带 Cookie
                 .maxAge(3600);  // 预检请求缓存时间
     }
 
     /**
-     * 扩展消息转换器, 将Java对象转换为JSON格式的响应数据
-     * @param converters
+     * 扩展消息转换器
+     * <p>
+     * 将 Java 对象转换为 JSON 格式的响应数据。
+     * 使用全局配置的 ObjectMapper（已包含自定义时间格式），插入到转换器链的头部以确保优先使用。
+     * </p>
+     *
+     * @param converters 消息转换器列表
      */
     @Override
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
@@ -81,7 +111,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         // 设置对象转换器，使用全局配置的 ObjectMapper（已包含自定义时间格式）
         converter.setObjectMapper(objectMapper);
-        // 将消息转换器加入到容器中
+        // 将消息转换器加入到容器最前部，确保优先匹配
         converters.add(0, converter);
     }
 }

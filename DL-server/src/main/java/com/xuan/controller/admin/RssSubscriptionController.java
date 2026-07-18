@@ -10,17 +10,23 @@ import com.xuan.result.Result;
 import com.xuan.service.IRssSubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
  * 管理端 RSS 订阅接口
+ * <p>
+ * 类级 @PreAuthorize：仅 ADMIN + AUDITOR 可访问。AUTHOR 角色被排除（仅能操作文章模块）。
+ * 写操作方法（PUT/DELETE）在方法级再追加 @PreAuthorize("hasRole('ADMIN')") 排除 AUDITOR。
+ * </p>
  */
 @Slf4j
 @RestController("adminRssSubscriptionController")
 @RequestMapping("/admin/rssSubscription")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
 public class RssSubscriptionController {
 
     private final IRssSubscriptionService rssSubscriptionService;
@@ -65,6 +71,7 @@ public class RssSubscriptionController {
      * @return
      */
     @PutMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.UPDATE, target = "rssSubscription", targetId = "#rssSubscriptions.id")
     public Result updateSubscription(@RequestBody RssSubscriptions rssSubscriptions) {
         log.info("更新RSS订阅,{}", rssSubscriptions);
@@ -78,6 +85,7 @@ public class RssSubscriptionController {
      * @return
      */
     @DeleteMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.DELETE, target = "rssSubscription", targetId = "#ids")
     public Result deleteSubscription(@RequestParam List<Long> ids) {
         log.info("批量删除RSS订阅,{}", ids);

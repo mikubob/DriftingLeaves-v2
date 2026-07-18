@@ -10,17 +10,23 @@ import com.xuan.service.ISystemConfigService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
  * 管理端系统配置接口
+ * <p>
+ * 类级 @PreAuthorize：仅 ADMIN + AUDITOR 可访问。AUTHOR 角色被排除（仅能操作文章模块）。
+ * 写操作方法（POST/PUT/DELETE）在方法级再追加 @PreAuthorize("hasRole('ADMIN')") 排除 AUDITOR。
+ * </p>
  */
 @Slf4j
 @RestController("adminSystemConfigController")
 @RequestMapping("/admin/systemConfig")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
 public class SystemConfigController {
 
     private final ISystemConfigService systemConfigService;
@@ -65,6 +71,7 @@ public class SystemConfigController {
      * @return
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.INSERT, target = "systemConfig")
     public Result addConfig(@Valid @RequestBody SystemConfigDTO systemConfigDTO) {
         log.info("添加系统配置,{}", systemConfigDTO);
@@ -78,6 +85,7 @@ public class SystemConfigController {
      * @return
      */
     @PutMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.UPDATE, target = "systemConfig", targetId = "#systemConfigDTO.id")
     public Result updateConfig(@Valid @RequestBody SystemConfigDTO systemConfigDTO) {
         log.info("更新系统配置,{}", systemConfigDTO);
@@ -91,6 +99,7 @@ public class SystemConfigController {
      * @return
      */
     @DeleteMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.DELETE, target = "systemConfig", targetId = "#ids")
     public Result deleteConfig(@RequestParam List<Long> ids) {
         log.info("批量删除系统配置,{}", ids);

@@ -11,17 +11,23 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
  * 管理端留言接口
+ * <p>
+ * 类级 @PreAuthorize：仅 ADMIN + AUDITOR 可访问。AUTHOR 角色被排除（仅能操作文章模块）。
+ * 写操作方法（POST/PUT/DELETE）在方法级再追加 @PreAuthorize("hasRole('ADMIN')") 排除 AUDITOR。
+ * </p>
  */
 @Slf4j
 @RestController("adminMessageController")
 @RequestMapping("/admin/message")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
 public class MessageController {
 
     private final IMessageService messageService;
@@ -44,6 +50,7 @@ public class MessageController {
      * @return
      */
     @PutMapping("/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.UPDATE, target = "message", targetId = "#ids")
     public Result<String> batchApprove(@RequestParam List<Long> ids) {
         log.info("批量审核通过留言: {}", ids);
@@ -70,6 +77,7 @@ public class MessageController {
      * @return
      */
     @PostMapping("/reply")
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.INSERT, target = "message", targetId = "#messageReplyDTO.parentId")
     public Result<String> adminReply(@Valid @RequestBody MessageReplyDTO messageReplyDTO,
                                      HttpServletRequest request) {

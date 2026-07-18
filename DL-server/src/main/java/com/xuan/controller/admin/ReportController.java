@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,11 +20,17 @@ import java.time.LocalDate;
 
 /**
  * 管理端统计相关接口
+ * <p>
+ * 类级 @PreAuthorize：仅 ADMIN + AUDITOR 可访问（数据统计仅审计员和管理员可看）。
+ * AUTHOR 角色被排除（仅能操作文章模块）。
+ * 全部为 GET 接口，无写操作方法级注解。
+ * </p>
  */
 @Slf4j
 @RestController("adminReportController")
 @RequestMapping("/admin/report")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
 public class ReportController {
 
     private final IReportService reportService;

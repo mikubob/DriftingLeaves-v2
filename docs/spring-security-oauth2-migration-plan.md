@@ -419,10 +419,10 @@ void generateBcrypt() {
 
 将输出填入对应位置：
 
-- `oauth2_registered_client.client_secret`：在生成的 `$2a$10$...` 前加上 `{bcrypt}` 前缀，即 `{bcrypt}$2a$10$...`
-- `sys_user.password`：直接存储生成的 `$2a$10$...`（无 `{bcrypt}` 前缀）
+- `oauth2_registered_client.client_secret`：在生成的 `$2a$10$...` 前加上 `{bcrypt}` 前缀，即 `{bcrypt}$2a$10$...`（SAS 客户端认证强依赖前缀，必须带）
+- `sys_user.password`：直接存储 `$2a$10$...` 即可（无 `{bcrypt}` 前缀也行），`UserDetailsServiceImpl` 加载时会自动补前缀兼容 `DelegatingPasswordEncoder`；为风格统一，亦可显式带上 `{bcrypt}` 前缀
 
-> 注意：SAS 使用 `DelegatingPasswordEncoder` 解析 `client_secret`，要求存储值带 `{bcrypt}` 前缀；`sys_user.password` 由全局 `PasswordEncoder`（BCrypt）直接匹配，不需要前缀。
+> 注意：项目全局 `PasswordEncoder` 统一使用 `DelegatingPasswordEncoder`（在 `AuthorizationServerConfig` 中通过 `PasswordEncoderFactories.createDelegatingPasswordEncoder()` 配置）。SAS 客户端认证直接读取存储值解析，要求 `client_secret` 必须带 `{bcrypt}` 前缀；`sys_user.password` 由 `UserDetailsServiceImpl.loadUserByUsername` 在加载时兜底补前缀，因此数据库中存不存前缀均可正常登录。
 
 #### 步骤 3：实现 UserDetailsService
 
