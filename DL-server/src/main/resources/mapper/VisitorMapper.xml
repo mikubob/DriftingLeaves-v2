@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xuan.mapper.VisitorMapper">
+
+    <!-- 获取指定时间范围内的新增访客统计 -->
+    <select id="getDailyNewVisitorStats" resultType="com.xuan.dto.DailyViewCountDTO">
+        select date(create_time) as date, count(*) as count
+        from visitors
+        where create_time >= #{begin}
+          and create_time &lt; date_add(#{end}, interval 1 day)
+        group by date(create_time)
+        order by date
+    </select>
+
+    <!-- 获取访客省份分布Top10 -->
+    <select id="getProvinceDistribution" resultType="com.xuan.dto.ProvinceCountDTO">
+        select ifnull(province, '未知') as province, count(*) as count
+        from visitors
+        group by province
+        order by count desc
+        limit 10
+    </select>
+
+</mapper>

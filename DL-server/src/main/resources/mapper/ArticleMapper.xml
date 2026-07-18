@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xuan.mapper.ArticleMapper">
+
+    <!--
+        管理端文章分页查询。
+        说明：管理后台列表需要展示分类名称，BaseMapper 默认分页只查 articles 表，
+        因此这里显式 LEFT JOIN article_categories，并将 ac.name 映射为 categoryName。
+    -->
+    <select id="pageQueryWithCategory" resultType="com.xuan.vo.ArticleVO">
+        SELECT
+            a.id,
+            a.title,
+            a.slug,
+            a.summary,
+            a.cover_image,
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count,
+            a.like_count,
+            a.comment_count,
+            a.word_count,
+            a.reading_time,
+            a.status,
+            a.is_top,
+            a.publish_time,
+            a.create_time,
+            a.update_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        <where>
+            <!-- 标题模糊搜索，对应管理端列表顶部搜索框。 -->
+            <if test="dto.title != null and dto.title != ''">
+                AND a.title LIKE CONCAT('%', #{dto.title}, '%')
+            </if>
+            <!-- 分类筛选仍然按文章表 category_id 精确匹配。 -->
+            <if test="dto.categoryId != null">
+                AND a.category_id = #{dto.categoryId}
+            </if>
+            <!-- 文章状态筛选：0-草稿，1-待审核，2-已发布，3-违规。 -->
+            <if test="dto.status != null">
+                AND a.status = #{dto.status}
+            </if>
+        </where>
+        ORDER BY a.is_top DESC, a.create_time DESC
+    </select>
+
+    <!-- 全文搜索文章 -->
+    <select id="searchWithFullText" resultType="com.xuan.vo.ArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.status, 
+            a.is_top, 
+            a.publish_time, 
+            a.create_time, 
+            a.update_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2
+        <if test="keyword != null and keyword != ''">
+            AND MATCH(a.title, a.summary, a.content_markdown) AGAINST(#{keyword} IN BOOLEAN MODE)
+        </if>
+        ORDER BY a.is_top DESC, a.create_time DESC
+    </select>
+
+    <!-- 获取已发布文章分页列表 -->
+    <select id="getPublishedPage" resultType="com.xuan.vo.BlogArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.is_top, 
+            a.publish_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2
+        ORDER BY a.is_top DESC, COALESCE(a.publish_time, a.create_time) DESC
+    </select>
+
+    <!-- 根据 slug 获取文章详情 -->
+    <select id="getBySlug" resultType="com.xuan.vo.BlogArticleDetailVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.content_html, 
+            a.content_markdown,
+            a.category_id, 
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.publish_time, 
+            a.update_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.slug = #{slug} AND a.status = 2
+    </select>
+
+    <!-- 获取上一篇文章（发布时间比当前文章新的文章） -->
+    <select id="getPrevArticle" resultType="com.xuan.vo.BlogArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.is_top, 
+            a.publish_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2 
+          AND a.publish_time > (SELECT publish_time FROM articles WHERE id = #{id})
+        ORDER BY a.publish_time ASC
+        LIMIT 1
+    </select>
+
+    <!-- 获取下一篇文章（发布时间比当前文章旧的文章） -->
+    <select id="getNextArticle" resultType="com.xuan.vo.BlogArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.is_top, 
+            a.publish_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2 
+          AND a.publish_time &lt; (SELECT publish_time FROM articles WHERE id = #{id})
+        ORDER BY a.publish_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 获取相关文章推荐（同分类，排除当前文章，最多 6 篇） -->
+    <select id="getRelatedArticles" resultType="com.xuan.vo.BlogArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.is_top, 
+            a.publish_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2 
+          AND a.id != #{articleId} 
+          AND a.category_id = #{categoryId}
+        ORDER BY a.is_top DESC, COALESCE(a.publish_time, a.create_time) DESC
+        LIMIT 6
+    </select>
+
+    <!-- 获取文章归档列表 -->
+    <select id="getArchiveList" resultType="com.xuan.vo.ArticleArchiveItemVO">
+        SELECT 
+            id, 
+            title, 
+            slug, 
+            publish_day, 
+            COALESCE(publish_time, create_time) AS publishTime
+        FROM articles
+        WHERE status = 2
+        ORDER BY COALESCE(publish_time, create_time) DESC
+    </select>
+
+    <!-- 博客端文章搜索（仅获取已发布文章） -->
+    <select id="searchPublished" resultType="com.xuan.vo.BlogArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.is_top, 
+            a.publish_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2
+          AND (a.title LIKE CONCAT('%', #{keyword}, '%')
+               OR a.summary LIKE CONCAT('%', #{keyword}, '%')
+               OR a.content_markdown LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY a.is_top DESC, COALESCE(a.publish_time, a.create_time) DESC
+    </select>
+
+    <!-- 根据分类 ID 获取已发布文章分页列表 -->
+    <select id="getPublishedByCategoryId" resultType="com.xuan.vo.BlogArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.is_top, 
+            a.publish_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2 AND a.category_id = #{categoryId}
+        ORDER BY a.is_top DESC, COALESCE(a.publish_time, a.create_time) DESC
+    </select>
+
+    <!-- 根据标签 ID 获取已发布文章分页列表 -->
+    <select id="getPublishedByTagId" resultType="com.xuan.vo.BlogArticleVO">
+        SELECT 
+            a.id, 
+            a.title, 
+            a.slug, 
+            a.summary, 
+            a.cover_image, 
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count, 
+            a.like_count, 
+            a.comment_count, 
+            a.word_count, 
+            a.reading_time,
+            a.is_top, 
+            a.publish_time
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        INNER JOIN article_tag_relations atr ON a.id = atr.article_id
+        WHERE a.status = 2 AND atr.tag_id = #{tagId}
+        ORDER BY a.is_top DESC, COALESCE(a.publish_time, a.create_time) DESC
+    </select>
+
+    <!-- 增加浏览量 -->
+    <update id="addViewCount">
+        UPDATE articles SET view_count = view_count + #{increment} WHERE id = #{id}
+    </update>
+
+    <!-- 增加点赞数 -->
+    <update id="addLikeCount">
+        UPDATE articles SET like_count = like_count + #{increment} WHERE id = #{id}
+    </update>
+
+    <!-- 获取文章浏览量 top10 -->
+    <select id="getViewTop10" resultType="com.xuan.dto.ArticleTitleViewCountDTO">
+        SELECT title, view_count AS viewCount
+        FROM articles
+        WHERE status = 2
+        ORDER BY view_count DESC
+        LIMIT 10
+    </select>
+
+    <!-- 获取本月热门文章点赞榜（前 5 篇） -->
+    <select id="getMonthHotArticlesByLike" resultType="com.xuan.vo.HotArticleVO">
+        SELECT
+            a.id,
+            a.title,
+            a.slug,
+            a.summary,
+            a.cover_image,
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count,
+            a.like_count,
+            a.comment_count,
+            a.word_count,
+            a.reading_time,
+            a.is_top,
+            a.publish_time,
+            a.like_count AS hot_value
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2
+          AND COALESCE(a.publish_time, a.create_time) >= #{begin}
+          AND COALESCE(a.publish_time, a.create_time) &lt; #{end}
+        ORDER BY a.like_count DESC, COALESCE(a.publish_time, a.create_time) DESC, a.id DESC
+        LIMIT 5
+    </select>
+
+    <!-- 获取本月热门文章浏览榜（前 5 篇） -->
+    <select id="getMonthHotArticlesByView" resultType="com.xuan.vo.HotArticleVO">
+        SELECT
+            a.id,
+            a.title,
+            a.slug,
+            a.summary,
+            a.cover_image,
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count,
+            a.like_count,
+            a.comment_count,
+            a.word_count,
+            a.reading_time,
+            a.is_top,
+            a.publish_time,
+            a.view_count AS hot_value
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2
+          AND COALESCE(a.publish_time, a.create_time) >= #{begin}
+          AND COALESCE(a.publish_time, a.create_time) &lt; #{end}
+        ORDER BY a.view_count DESC, COALESCE(a.publish_time, a.create_time) DESC, a.id DESC
+        LIMIT 5
+    </select>
+
+    <!-- 获取全站热门文章点赞榜（前 5 篇） -->
+    <select id="getSiteHotArticlesByLike" resultType="com.xuan.vo.HotArticleVO">
+        SELECT
+            a.id,
+            a.title,
+            a.slug,
+            a.summary,
+            a.cover_image,
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count,
+            a.like_count,
+            a.comment_count,
+            a.word_count,
+            a.reading_time,
+            a.is_top,
+            a.publish_time,
+            a.like_count AS hot_value
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2
+        ORDER BY a.like_count DESC, a.publish_time DESC, a.id DESC
+        LIMIT 5
+    </select>
+
+    <!-- 获取全站热门文章浏览榜（前 5 篇） -->
+    <select id="getSiteHotArticlesByView" resultType="com.xuan.vo.HotArticleVO">
+        SELECT
+            a.id,
+            a.title,
+            a.slug,
+            a.summary,
+            a.cover_image,
+            a.category_id,
+            ac.name AS category_name,
+            a.view_count,
+            a.like_count,
+            a.comment_count,
+            a.word_count,
+            a.reading_time,
+            a.is_top,
+            a.publish_time,
+            a.view_count AS hot_value
+        FROM articles a
+        LEFT JOIN article_categories ac ON a.category_id = ac.id
+        WHERE a.status = 2
+        ORDER BY a.view_count DESC, a.publish_time DESC, a.id DESC
+        LIMIT 5
+    </select>
+
+</mapper>

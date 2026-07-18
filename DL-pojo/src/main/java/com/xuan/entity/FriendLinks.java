@@ -1,0 +1,49 @@
+package com.xuan.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.xuan.entity.base.BaseEntity;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
+import java.io.Serial;
+
+/**
+ * 友情链接
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@TableName("friend_links")
+@EqualsAndHashCode(callSuper = true)
+public class FriendLinks extends BaseEntity {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    // 网站名称
+    private String name;
+
+    // 网站地址
+    private String url;
+
+    // 头像 url
+    private String avatarUrl;
+
+    // 网站描述
+    private String description;
+
+    // 排序，越小越靠前
+    private Integer sort;
+
+    // 是否可见
+    private Integer isVisible;
+}

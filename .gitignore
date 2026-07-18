@@ -1,0 +1,101 @@
+# ==================== Maven 相关 ====================
+# Maven 构建输出目录
+target/
+!**/src/main/**/target/
+!**/src/
+test/**/target/
+
+# Maven 本地仓库（如果在项目内）
+.m2/repository/
+
+# ==================== IntelliJ IDEA ====================
+# IDEA 项目文件
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# IDEA 编译缓存
+.idea/modules.xml
+.idea/workspace.xml
+.idea/misc.xml
+.idea/vcs.xml
+.idea/libraries/
+
+# ==================== Eclipse ====================
+# Eclipse 项目文件
+.settings/
+.project
+.classpath
+.metadata
+
+# ==================== VS Code ====================
+# VS Code 配置
+.vscode/
+.trae/
+
+# ==================== 操作系统文件 ====================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+
+# ==================== 日志文件 ====================
+# 各种日志文件
+*.log
+logs/
+*.gz
+
+# ==================== 临时文件 ====================
+# 临时文件和缓存
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ==================== 数据库文件 ====================
+# 数据库相关文件
+*.db
+*.sqlite
+*.h2.db
+
+# ==================== 环境配置 ====================
+# 本地配置文件（不包含敏感信息的模板可以提交）
+application-local.properties
+application-local.yml
+.env.local
+*.yaml
+*.yml
+# ==================== 编译产物 ====================
+# Java 编译产物
+*.class
+*.jar
+*.war
+*.ear
+
+# ==================== 其他 ====================
+# Coverage 工具生成的文件
+coverage/
+*.exec
+*.sql
+
+# JUnit 临时文件
+.junit/
+.junitvm/
+
+# Heap dump 文件
+*.hprof
+
+# VM 选项文件
+*.vmoptions

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xuan.mapper.ArticleTagMapper">
+
+    <select id="getVisibleTags" resultType="com.xuan.entity.ArticleTags">
+        SELECT
+            t.*,
+            COUNT(a.id) AS article_count
+        FROM article_tags t
+        LEFT JOIN article_tag_relations atr ON t.id = atr.tag_id
+        LEFT JOIN articles a ON atr.article_id = a.id AND a.status = 2
+        GROUP BY t.id
+        ORDER BY t.id
+    </select>
+
+    <select id="getTagByArticleId" resultType="com.xuan.entity.ArticleTags">
+        select t.* from article_tags t
+        inner join article_tag_relations atr on t.id = atr.tag_id
+        where atr.article_id = #{articleId}
+        order by t.id
+    </select>
+
+    <select id="getTagIdsByArticleId" resultType="java.lang.Long">
+        select tag_id from article_tag_relations
+        where article_id = #{articleId}
+        order by tag_id
+    </select>
+
+    <delete id="deleteRelationsByArticleId">
+        delete from article_tag_relations where article_id = #{articleId}
+    </delete>
+
+    <insert id="batchInsertRelations" parameterType="java.util.List">
+        insert into article_tag_relations (article_id, tag_id) values
+        <foreach collection="relations" item="item" separator=",">
+            (#{item.articleId}, #{item.tagId})
+        </foreach>
+    </insert>
+
+    <delete id="batchDeleteRelationsByArticleIds">
+        delete from article_tag_relations where article_id in
+        <foreach collection="articleIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="deleteRelationsByTagIds">
+        delete from article_tag_relations where tag_id in
+        <foreach collection="tagIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

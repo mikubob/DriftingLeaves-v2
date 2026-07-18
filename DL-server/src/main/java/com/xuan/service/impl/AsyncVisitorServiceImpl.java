@@ -1,0 +1,92 @@
+package com.xuan.service.impl;
+
+import cn.hutool.core.util.StrUtil;
+import com.xuan.entity.Views;
+import com.xuan.entity.Visitors;
+import com.xuan.mapper.ViewMapper;
+import com.xuan.mapper.VisitorMapper;
+import com.xuan.service.AsyncVisitorService;
+import com.xuan.utils.IpUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+/**
+ * 异步访问服务实现类(地理位置查询和浏览记录写入异步化)
+ */
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class AsyncVisitorServiceImpl implements AsyncVisitorService {
+
+    private final VisitorMapper visitorMapper;
+    private final ViewMapper viewMapper;
+
+    /**
+     * 异步处理：IP地理位置查询 + 访客地理信息更新 + 浏览记录写入
+     * 接收 visitorId 而非 Visitors 对象引用，避免主线程与异步线程共享可变对象导致竞态条件
+     */
+    @Override
+    @Async("taskExecutor")
+    public void processGeoAndRecordViewAsync(Long visitorId, String ip, String userAgent, String pagePath, String referer, String pageTitle) {
+        try {
+            // ip地理位置查询
+            Map<String, String> geoInfo = IpUtil.getGeoInfo(ip);
+
+            String country = geoInfo.get("country");
+            String province = geoInfo.get("province");
+            String city = geoInfo.get("city");
+
+            // 仅在地理位置有效时更新
+            if (StrUtil.isNotBlank(country)) {
+                // 更新访客地理信息
+                Visitors current = visitorMapper.selectById(visitorId);
+                if (current != null) {
+                    boolean geoChanged = !equalsNullSafe(current.getCountry(), country)
+                            || !equalsNullSafe(current.getProvince(), province)
+                            || !equalsNullSafe(current.getCity(), city);
+                    if (geoChanged) {
+                        // 仅更新地理位置字段，避免与主线程的访问计数产生竞态
+                        Visitors update = Visitors.builder()
+                                .id(visitorId)
+                                .country(country)
+                                .province(province)
+                                .city(city)
+                                .build();
+                        visitorMapper.updateById(update);
+                    }
+                }
+            }
+            //写入浏览记录
+            viewMapper.insert(Views.builder()
+                    .visitorId(visitorId)
+                    .pagePath(pagePath)
+                    .referer(referer)
+                    .pageTitle(pageTitle)
+                    .ipAddress(ip)
+                    .userAgent(userAgent)
+                    .viewTime(LocalDateTime.now())
+                    .build());
+            log.debug("异步处理访客记录完成: visitorId={}, ip={}", visitorId, ip);
+        } catch (Exception e) {
+            log.error("异步处理访客记录失败: visitorId={}, ip={}, ex={}", visitorId, ip, e.getMessage());
+        }
+    }
+
+    /**
+     * 判断两个字符串是否相等
+     *
+     * @param a
+     * @param b
+     * @return
+     */
+    private boolean equalsNullSafe(String a, String b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.equals(b);
+    }
+}
