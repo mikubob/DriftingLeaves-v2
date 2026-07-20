@@ -2,6 +2,7 @@ package com.xuan.auth.config;
 
 import com.xuan.auth.security.CustomOAuth2UserService;
 import com.xuan.auth.security.OAuth2LoginSuccessHandler;
+import com.xuan.auth.security.OAuth2StateAuthorizationRequestResolver;
 import com.xuan.properties.OAuth2LoginProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +15,9 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.ArrayList;
@@ -233,7 +236,9 @@ public class OAuth2LoginConfig {
     public SecurityFilterChain oauth2LoginSecurityFilterChain(HttpSecurity http,
                                                                ClientRegistrationRepository clientRegistrationRepository,
                                                                CustomOAuth2UserService customOAuth2UserService,
-                                                               JwtEncoder jwtEncoder) throws Exception {
+                                                               OAuth2TokenGenerator<?> tokenGenerator,
+                                                               OAuth2AuthorizationService authorizationService,
+                                                               RegisteredClientRepository registeredClientRepository) throws Exception {
         http
                 // 仅匹配 OAuth2 登录路径
                 .securityMatcher(
@@ -246,10 +251,18 @@ public class OAuth2LoginConfig {
                 // ClientRegistrationRepository 由 Spring Security OAuth2 Client 自动配置拾取
                 // （InMemoryClientRegistrationRepository Bean 被自动注入到 OAuth2LoginAuthenticationFilter）
                 .oauth2Login(oauth2 -> oauth2
+                        // P1-3 多源回跳:自定义 resolver 保留前端传的 state 参数(编码 redirect_uri)
+                        .authorizationEndpoint(auth -> auth
+                                .authorizationRequestResolver(
+                                        new OAuth2StateAuthorizationRequestResolver(clientRegistrationRepository))
+                        )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        .successHandler(new OAuth2LoginSuccessHandler(jwtEncoder))
+                        // P1-2 改造:传入 tokenGenerator + authorizationService + registeredClientRepository
+                        // 用于生成 access_token + refresh_token 并持久化授权记录
+                        .successHandler(new OAuth2LoginSuccessHandler(
+                                tokenGenerator, authorizationService, registeredClientRepository))
                 )
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()

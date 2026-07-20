@@ -55,11 +55,16 @@ import java.nio.charset.StandardCharsets;
  * /oauth2/authorization/**              → 由 @Order(3) OAuth2LoginConfig 链处理（GitHub/Gitee 发起）
  * /login/oauth2/code/**                 → 由 @Order(3) OAuth2LoginConfig 链处理（GitHub/Gitee 回调）
  * /oauth2/**                            → permitAll（SAS 自身端点，由 @Order(1) 链处理）
+ * /api/logout                           → permitAll（登出接口，token 过期也能调）
+ * /admin/auth/**                        → permitAll（管理端发验证码，未登录状态调用）
  * /admin/server-monitor/**              → hasRole('ADMIN')（敏感信息仅 ADMIN）
+ * GET    /admin/me                      → hasAnyRole('ADMIN','AUTHOR','AUDITOR')（被 GET /admin/** 覆盖）
+ * PUT    /admin/me                      → hasAnyRole('ADMIN','AUTHOR')（被 PUT /admin/** 覆盖）
  * GET    /admin/**                      → hasAnyRole('ADMIN','AUTHOR','AUDITOR')（后台读权限）
  * POST   /admin/**                      → hasAnyRole('ADMIN','AUTHOR')（后台写权限，AUDITOR 排除）
  * PUT    /admin/**                      → hasAnyRole('ADMIN','AUTHOR')
  * DELETE /admin/**                      → hasAnyRole('ADMIN','AUTHOR')
+ * GET    /blog/auth/me                  → hasRole('GUEST')（当前用户信息，特例先匹配）
  * /blog/auth/**                         → permitAll（注册、发送验证码）
  * PUT    /blog/rssSubscription/unsubscribe → permitAll（RSS 邮件链接匿名退订）
  * GET    /blog/**                       → permitAll（博客端读公开）
@@ -118,6 +123,14 @@ public class ResourceServerConfig {
                         // /oauth2/** 由 @Order(1) 授权服务器链优先处理，这里 permitAll 仅作兜底
                         .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
 
+                        // /api/logout：登出接口（决策 2 方案 A），Admin/Blog 共用，token 过期也能调
+                        // 必须放在 /admin/** 规则之前，否则会被 hasAnyRole 拦截
+                        .requestMatchers("/api/logout").permitAll()
+
+                        // 管理端认证接口：发送登录验证码（未登录状态调用）
+                        // 必须放在 GET/POST/PUT/DELETE /admin/** 规则之前，否则会被 hasAnyRole 拦截
+                        .requestMatchers("/admin/auth/**").permitAll()
+
                         // 敏感路径：仅 ADMIN 可访问
                         // 服务器监控包含 CPU/内存/磁盘等敏感信息，仅 ADMIN
                         .requestMatchers("/admin/server-monitor/**").hasRole("ADMIN")
@@ -133,6 +146,10 @@ public class ResourceServerConfig {
                         .requestMatchers(HttpMethod.DELETE, "/admin/**").hasAnyRole("ADMIN", "AUTHOR")
 
                         // ===== 博客端权限规则（阶段四新增） =====
+                        // 当前用户信息接口特例：必须放在 /blog/auth/** permitAll 之前
+                        // 否则会被通配规则先匹配,导致未登录用户也能访问 /blog/auth/me
+                        .requestMatchers(HttpMethod.GET, "/blog/auth/me").hasRole("GUEST")
+
                         // 博客端认证接口：注册、发送验证码（无需登录）
                         .requestMatchers("/blog/auth/**").permitAll()
 

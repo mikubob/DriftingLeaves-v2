@@ -42,6 +42,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .collect(Collectors.toList());
 
         return new SecurityUser(user.getId(), user.getUsername(), password,
-                user.getUserType(), user.getNickname(), authorities);
+                user.getUserType(), user.getNickname(),
+                user.getEmail(), user.getAvatar(), authorities);
     }
 }

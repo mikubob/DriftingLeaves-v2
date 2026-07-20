@@ -19,6 +19,10 @@ public class SecurityUser implements UserDetails {
     private final String password;
     private final Integer userType;
     private final String nickname;
+    // 邮箱:供 /me 接口、JWT claims 使用
+    private final String email;
+    // 头像 URL:供 /me 接口、JWT claims 使用
+    private final String avatar;
     private final Collection<? extends GrantedAuthority> authorities;
 
     @Override

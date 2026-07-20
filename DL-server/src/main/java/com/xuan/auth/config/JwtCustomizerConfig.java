@@ -71,14 +71,25 @@ public class JwtCustomizerConfig {
                 // 写入 roles claim，供 Resource Server 的 JwtAuthenticationConverter 解析为 GrantedAuthority
                 context.getClaims().claim("roles", roles);
 
-                // 提取业务用户信息（userId/nickname），写入 JWT claims 供业务代码直接读取
+                // 提取业务用户信息（userId/nickname/email/avatar），写入 JWT claims 供业务代码直接读取
                 // authentication.getPrincipal() 才是真正的用户对象（SecurityUser）
                 Object principal = authentication.getPrincipal();
                 if (principal instanceof SecurityUser securityUser) {
                     // 用户 ID：业务代码通过 jwt.getClaim("user_id") 获取，避免查库
                     context.getClaims().claim("user_id", securityUser.getUserId());
                     // 用户昵称：前端展示用，避免额外请求用户信息接口
-                    context.getClaims().claim("nickname", securityUser.getNickname());
+                    if (securityUser.getNickname() != null) {
+                        context.getClaims().claim("nickname", securityUser.getNickname());
+                    }
+                    // 邮箱：/me 接口与前端展示用
+                    if (securityUser.getEmail() != null) {
+                        context.getClaims().claim("email", securityUser.getEmail());
+                    }
+                    // 头像 URL：/me 接口与前端展示用
+                    // 注:新建用户可能尚未设置头像,需判空,否则 JwtClaimsSet.Builder.claim 会抛 IllegalArgumentException
+                    if (securityUser.getAvatar() != null) {
+                        context.getClaims().claim("avatar", securityUser.getAvatar());
+                    }
                 }
             }
         };
