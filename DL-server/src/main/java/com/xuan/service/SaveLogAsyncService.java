@@ -5,9 +5,6 @@ import org.aspectj.lang.JoinPoint;
 
 /**
  * 异步保存操作日志服务接口
- * <p>
- * 阶段三改造：方法签名新增 {@code userId} 参数。
- * </p>
  *
  * <h3>为何不直接在异步方法内取 SecurityContextHolder？</h3>
  * <p>
@@ -30,12 +27,11 @@ public interface SaveLogAsyncService {
      * 异步保存日志
      *
      * @param joinPoint    切点，包含被拦截方法的信息
-     * @param result       方法执行结果（暂未使用）
      * @param error        方法执行异常，不为 null 表示操作失败
      * @param operationLog 操作日志注解，包含操作类型、目标等信息
      * @param userId       当前操作用户 ID（由调用方在请求线程内从 SecurityContextHolder 提取，
      *                     避免异步线程无法访问 ThreadLocal 上下文）
      */
-    void saveLogAsync(JoinPoint joinPoint, Object result, Throwable error,
+    void saveLogAsync(JoinPoint joinPoint, Throwable error,
                       OperationLog operationLog, Long userId);
 }

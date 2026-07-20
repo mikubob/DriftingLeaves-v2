@@ -15,7 +15,6 @@ import java.io.Serializable;
 /**
  * RSS订阅DTO
  * <p>
- * 阶段四：移除 userId 字段，userId 由 Controller 从 SecurityContext 中获取后传入 Service。
  * 昵称与邮箱亦可从 SecurityUser 直接获取，DTO 仅作覆盖可选。
  * </p>
  */

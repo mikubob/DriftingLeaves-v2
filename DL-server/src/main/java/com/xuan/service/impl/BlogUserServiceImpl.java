@@ -13,7 +13,6 @@ import com.xuan.mapper.SysUserRoleMapper;
 import com.xuan.service.AsyncEmailService;
 import com.xuan.service.BlogUserService;
 import com.xuan.service.EmailCodeService;
-import com.xuan.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +34,6 @@ public class BlogUserServiceImpl implements BlogUserService {
     private final SysUserMapper sysUserMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
     private final EmailCodeService emailCodeService;
-    private final EmailService emailService;
     private final AsyncEmailService asyncEmailService;
     private final PasswordEncoder passwordEncoder;
 

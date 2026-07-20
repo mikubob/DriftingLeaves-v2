@@ -80,8 +80,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         return PageResult.fromIPage(articlePage);
     }
 
-    // ===== 其他方法待实现 =====
-
     /**
      * 创建文章
      *
@@ -516,11 +514,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     }
 
 
-//<==========私有辅助方法辅助==========>
-
-    /**
-     * 构建查询条件
-     */
     /**
      * 获取本月热门文章点赞榜（前 5 篇）
      * @return 本月点赞数最高的已发布文章列表
@@ -561,30 +554,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Cacheable(value = "hotArticles", key = "'site:view'")
     public List<HotArticleVO> getSiteHotArticlesByView() {
         return baseMapper.getSiteHotArticlesByView();
-    }
-
-    private LambdaQueryWrapper<Articles> buildQueryWrapper(ArticlePageQueryDTO dto) {
-        LambdaQueryWrapper<Articles> wrapper = new LambdaQueryWrapper<>();
-
-        // 标题模糊搜索
-        if (StrUtil.isNotBlank(dto.getTitle())) {
-            wrapper.like(Articles::getTitle, dto.getTitle());
-        }
-
-        // 分类 ID 精确匹配
-        if (dto.getCategoryId() != null) {
-            wrapper.eq(Articles::getCategoryId, dto.getCategoryId());
-        }
-
-        // 文章状态匹配
-        if (dto.getStatus() != null) {
-            wrapper.eq(Articles::getStatus, dto.getStatus());
-        }
-
-        // 排序：先按置顶降序，再按创建时间降序
-        wrapper.orderByDesc(Articles::getIsTop, Articles::getCreateTime);
-
-        return wrapper;
     }
 
     /**

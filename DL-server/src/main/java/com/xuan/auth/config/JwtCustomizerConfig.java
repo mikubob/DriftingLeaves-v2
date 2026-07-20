@@ -24,8 +24,8 @@ import java.util.stream.Collectors;
  *
  * <h3>为何要把 user_id 写入 JWT？</h3>
  * <p>
- * 阶段三完全移除 BaseContext 后，业务代码（如 OperationLogAspect）需要从 SecurityContextHolder
- * 获取当前用户 ID。但 Resource Server 解析 JWT 后，SecurityContext 中的 principal 是
+ * 业务代码（如 OperationLogAspect）需要从 SecurityContextHolder 获取当前用户 ID。
+ * 但 Resource Server 解析 JWT 后，SecurityContext 中的 principal 是
  * {@code Jwt} 对象（而非 SecurityUser），无法直接调用 {@code getUserId()}。
  * 将 user_id 写入 JWT claims 后，业务代码可通过 {@code jwt.getClaim("user_id")} 获取，
  * 避免每次请求都查库。

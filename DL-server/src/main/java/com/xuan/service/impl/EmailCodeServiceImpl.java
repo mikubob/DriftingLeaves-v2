@@ -95,14 +95,6 @@ public class EmailCodeServiceImpl implements EmailCodeService {
         }
     }
 
-    @Override
-    public Long getRemainingAttempts(String email) {
-        if (isLocked(email)) {
-            return 0L;
-        }
-        return Math.max(MAX_ATTEMPTS - getAttemptCount(email), 0);
-    }
-
     // ===== 内部辅助方法 =====
 
     private void recordFailedAttempt(String email) {

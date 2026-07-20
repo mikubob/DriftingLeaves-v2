@@ -15,7 +15,7 @@ import java.io.IOException;
 /**
  * OAuth2 Token 响应 Cookie 下发处理器
  * <p>
- * 阶段三步骤 6 的核心组件:在 Spring Authorization Server 颁发 Token 成功后,
+ * 在 Spring Authorization Server 颁发 Token 成功后,
  * 将 access_token / refresh_token 以 HttpOnly Cookie 形式写入响应,
  * 同时保留默认的 JSON 响应体输出,实现 Cookie + Header 双轨兼容。
  * </p>
@@ -35,7 +35,7 @@ import java.io.IOException;
  * <ul>
  *     <li>{@code admin_password_code}:自定义管理员登录(用户名+密码+验证码)</li>
  *     <li>{@code refresh_token}:刷新 Token</li>
- *     <li>{@code authorization_code}:标准 OAuth2 授权码流程(阶段四使用)</li>
+ * <li>{@code authorization_code}:标准 OAuth2 授权码流程</li>
  *     <li>{@code client_credentials}:客户端凭证流程</li>
  * </ul>
  *

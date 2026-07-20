@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 /**
  * 第三方 OAuth2 登录配置属性
  * <p>
- * 阶段四新增：替代 Spring Boot 自动配置 {@code spring.security.oauth2.client.*}，
+ * 替代 Spring Boot 自动配置 {@code spring.security.oauth2.client.*}，
  * 避免在 client-id 为空时启动失败（开发期未配置第三方凭证时也能正常启动）。
  * </p>
  *

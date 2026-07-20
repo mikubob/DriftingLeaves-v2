@@ -35,7 +35,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -50,14 +49,6 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
     private final AsyncEmailService asyncEmailService;
     private final WebsiteProperties websiteProperties;
     private final SysUserMapper sysUserMapper;
-
-    // 邮箱正则
-    private static final Pattern EMAIL_PATTERN = Pattern.compile(
-            "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-    );
-
-    // QQ号正则 (5-12位数字，首位非0)
-    private static final Pattern QQ_PATTERN = Pattern.compile("^[1-9]\\d{4,11}$");
 
     /**
      * 提交留言
@@ -379,7 +370,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
     /**
      * 检查父留言是否开启邮箱通知，如果是则发送通知邮件
      * <p>
-     * 阶段四：新架构下父留言作者邮箱从 sys_user 表查询，按 user_id 关联。
+     * 父留言作者邮箱从 sys_user 表查询，按 user_id 关联。
      * </p>
      *
      * @param parentId      父留言ID

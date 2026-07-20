@@ -47,24 +47,10 @@ public interface VerifyCodeService {
     Long getLockRemainingMinutes(Long userId);
 
     /**
-     * 是否允许尝试验证
-     *
-     * @param userId 用户 ID
-     */
-    boolean canAttempt(Long userId);
-
-    /**
      * 验证验证码
      *
      * @param userId 用户 ID
      * @param code   验证码
      */
     boolean verifyCode(Long userId, String code);
-
-    /**
-     * 获取剩余尝试次数
-     *
-     * @param userId 用户 ID
-     */
-    Long getRemainingAttempts(Long userId);
 }

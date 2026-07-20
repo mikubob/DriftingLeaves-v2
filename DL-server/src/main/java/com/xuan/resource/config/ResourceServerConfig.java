@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * OAuth2 Resource Server 配置类
  * <p>
- * 阶段三 RBAC 权限模型的第一层防线：URL 粗粒度权限控制。
+ * RBAC 权限模型的第一层防线：URL 粗粒度权限控制。
  * </p>
  *
  * <h3>核心职责</h3>
@@ -145,7 +145,7 @@ public class ResourceServerConfig {
                         .requestMatchers(HttpMethod.PUT, "/admin/**").hasAnyRole("ADMIN", "AUTHOR")
                         .requestMatchers(HttpMethod.DELETE, "/admin/**").hasAnyRole("ADMIN", "AUTHOR")
 
-                        // ===== 博客端权限规则（阶段四新增） =====
+                        // ===== 博客端权限规则 =====
                         // 当前用户信息接口特例：必须放在 /blog/auth/** permitAll 之前
                         // 否则会被通配规则先匹配,导致未登录用户也能访问 /blog/auth/me
                         .requestMatchers(HttpMethod.GET, "/blog/auth/me").hasRole("GUEST")

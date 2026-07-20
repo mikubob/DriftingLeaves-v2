@@ -12,10 +12,10 @@ import java.util.List;
  * 文章-作者关联 Mapper
  * <p>
  * 提供 article_authors 表的基础 CRUD（继承自 BaseMapper），
- * 以及阶段三 RBAC 权限校验所需的查询方法。
+ * 以及 RBAC 权限校验所需的查询方法。
  * </p>
  * <p>
- * 阶段三 ArticlePermissionService 通过本 Mapper 判断 AUTHOR 角色用户
+ * {@link com.xuan.service.ArticlePermissionService} 通过本 Mapper 判断 AUTHOR 角色用户
  * 是否为指定文章的作者（任意角色 / 第一作者），从而实现数据范围校验。
  * </p>
  */

@@ -19,7 +19,6 @@ public interface IMessageService extends IService<Messages> {
 
     /**
      * 访客提交留言
-     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      * @param messageDTO
      * @param userId
      * @param request
@@ -60,7 +59,6 @@ public interface IMessageService extends IService<Messages> {
 
     /**
      * 用户编辑留言
-     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      */
     void editMessage(MessageEditDTO editDTO, Long userId);
 

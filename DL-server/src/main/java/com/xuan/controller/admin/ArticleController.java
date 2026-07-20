@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * 管理端文章接口
  * <p>
- * 阶段三 RBAC 权限模型第三层（方法级 @PreAuthorize）的核心落地示例。
+ * RBAC 权限模型第三层（方法级 @PreAuthorize）的核心落地示例。
  * </p>
  *
  * <h3>权限策略</h3>
@@ -46,7 +46,7 @@ import java.util.List;
  * <h3>审核端点拆分说明</h3>
  * <p>
  * 原 updateStatus 同时承载"作者提交审核"与"管理员审核"两种语义，权限要求不同。
- * 阶段三将其拆分为：
+ * 将其拆分为：
  * <ul>
  *     <li>PUT /admin/article/status/{id}：作者提交审核/撤回（AUTHOR + ADMIN）</li>
  *     <li>PUT /admin/article/audit/{id}：管理员审核通过/违规（仅 ADMIN）</li>

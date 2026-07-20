@@ -13,9 +13,6 @@ import java.io.Serializable;
 
 /**
  * 访客编辑评论DTO
- * <p>
- * 阶段四：移除 userId 字段，userId 由 Controller 从 SecurityContext 中获取后传入 Service。
- * </p>
  */
 @Data
 @Builder

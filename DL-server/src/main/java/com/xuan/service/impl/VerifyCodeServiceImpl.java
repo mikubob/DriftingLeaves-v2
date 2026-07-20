@@ -104,18 +104,6 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
     }
 
     /**
-     * 判断是否允许尝试
-     *
-     * @param userId 用户 ID
-     * @return 是否允许尝试
-     */
-    @Override
-    public boolean canAttempt(Long userId) {
-        // 检查是否被锁定
-        return !isLocked(userId);
-    }
-
-    /**
      * 验证验证码
      *
      * @param userId 用户 ID
@@ -154,21 +142,6 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
         }
     }
 
-    /**
-     * 获取剩余尝试次数
-     *
-     * @param userId 用户 ID
-     * @return 剩余尝试次数
-     */
-    @Override
-    public Long getRemainingAttempts(Long userId) {
-        if (isLocked(userId)) {
-            return 0L;
-        }
-        Long attemptCount = getAttemptCount(userId);
-        return Math.max(MAX_ATTEMPTS - attemptCount, 0);
-    }
-
     // 记录失败尝试
     private void recordFailedAttempt(Long userId) {
         String attemptKey = key(KEY_ATTEMPT_COUNT_PREFIX, userId);
@@ -194,7 +167,7 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
     }
 
     // 重置状态
-    public void clearAll(Long userId) {
+    private void clearAll(Long userId) {
         redisTemplate.delete(key(KEY_VERIFY_CODE_PREFIX, userId));
         redisTemplate.delete(key(KEY_RATE_LIMIT_PREFIX, userId));
         redisTemplate.delete(key(KEY_ATTEMPT_COUNT_PREFIX, userId));
@@ -202,7 +175,7 @@ public class VerifyCodeServiceImpl implements VerifyCodeService {
     }
 
     // 获取当前尝试次数
-    public Long getAttemptCount(Long userId) {
+    private Long getAttemptCount(Long userId) {
         try {
             Object value = redisTemplate.opsForValue().get(key(KEY_ATTEMPT_COUNT_PREFIX, userId));
             if (value == null) {

@@ -2,6 +2,7 @@ package com.xuan.service.impl.monitor;
 
 import com.xuan.enumeration.DeploymentModeEnum;
 import com.xuan.properties.ServerMonitorProperties;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
@@ -21,6 +22,7 @@ import java.util.Locale;
  * 2. 环境变量显式覆盖
  * 3. 自动检测容器特征
  */
+@Slf4j
 @Component
 public class ServerMonitorEnvironmentUtil {
 
@@ -157,7 +159,8 @@ public class ServerMonitorEnvironmentUtil {
                     return true;
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("读取 /proc/1/cgroup 失败，跳过容器 cgroup 检测", e);
         }
         return false;
     }

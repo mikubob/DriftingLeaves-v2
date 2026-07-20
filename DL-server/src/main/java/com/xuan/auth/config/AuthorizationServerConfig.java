@@ -84,7 +84,7 @@ public class AuthorizationServerConfig {
                 .oidc(Customizer.withDefaults())
                 // 注册自定义 grant type 的转换器和认证提供者
                 // - admin_password_code：管理端用户名+密码+验证码登录
-                // - email_code：博客端邮箱+验证码登录（阶段四新增）
+                // - email_code：博客端邮箱+验证码登录
                 .tokenEndpoint(tokenEndpoint -> tokenEndpoint
                         .accessTokenRequestConverter(adminPasswordCodeAuthenticationConverter)
                         .accessTokenRequestConverter(emailCodeAuthenticationConverter)

@@ -81,37 +81,6 @@ public class IpUtil {
 
 
     /**
-     * 获取地理位置 (离线高性能版)
-     */
-    public static String getIpLocation(String ip) {
-        if (isInvalid(ip) || "127.0.0.1".equals(ip)) return "本地";
-
-        Ip2Region ip2Region = getIp2RegionByType(ip);
-        if (ip2Region == null) return "未知";
-
-        try {
-            String region = ip2Region.search(ip);
-            if (region != null) {
-                Map<String, String> geoInfo = parseGeoInfo(region);
-                StringBuilder sb = new StringBuilder();
-                String province = geoInfo.getOrDefault("province", "");
-                String city = geoInfo.getOrDefault("city", "");
-
-                // 格式: 省份 城市
-                if (!province.isEmpty()) sb.append(province);
-                if (!city.isEmpty()) {
-                    if (!sb.isEmpty()) sb.append(" ");
-                    sb.append(city);
-                }
-                return !sb.isEmpty() ? sb.toString() : "未知";
-            }
-        } catch (Exception e) {
-            log.error("IP 地理位置解析失败", e);
-        }
-        return "未知";
-    }
-
-    /**
      * 获取地理位置信息
      * 返回包含 country、province 和 city 的 Map
      *
@@ -218,26 +187,5 @@ public class IpUtil {
             return true;
         }
         return false;
-    }
-
-    /**
-     * 关闭 ip2region 查询服务资源
-     */
-    public static void close() {
-        if (ip2RegionV4 != null) {
-            try {
-                ip2RegionV4.close();
-            } catch (Exception e) {
-                log.error("关闭 ip2region IPv4 查询服务失败", e);
-            }
-        }
-
-        if (ip2RegionV6 != null) {
-            try {
-                ip2RegionV6.close();
-            } catch (Exception e) {
-                log.error("关闭 ip2region IPv6 查询服务失败", e);
-            }
-        }
     }
 }

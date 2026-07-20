@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * 管理端文章评论接口
  * <p>
- * 阶段三 RBAC 权限模型第三层（方法级 @PreAuthorize）落地。
+ * RBAC 权限模型第三层（方法级 @PreAuthorize）落地。
  * </p>
  *
  * <h3>权限策略</h3>

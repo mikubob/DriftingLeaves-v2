@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * 博客端文章评论接口
  * <p>
- * 阶段四：写接口（POST/PUT/DELETE）需 GUEST 角色（由 ResourceServerConfig 控制），
+ * 写接口（POST/PUT/DELETE）需 GUEST 角色（由 ResourceServerConfig 控制），
  * userId 由 {@link SecurityUser} 中获取，不再由前端传入。
  * </p>
  */

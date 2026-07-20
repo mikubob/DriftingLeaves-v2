@@ -21,19 +21,9 @@ import java.util.List;
  * 注册 Web 层相关组件：拦截器、跨域支持、消息转换器。
  * </p>
  *
- * <h3>阶段三改造说明</h3>
- * <p>
- * 已彻底移除以下旧组件的引用：
- * </p>
- * <ul>
- *     <li>{@code JwtTokenAdminInterceptor}：旧的 JWT 拦截器，已由 Spring Security Resource Server 接管</li>
- *     <li>{@code SecurityContextToBaseContextInterceptor}：过渡期同步 SecurityContext → BaseContext 的拦截器，
- *         阶段三完全移除 BaseContext 后随之删除</li>
- * </ul>
- *
  * <h3>跨域配置说明</h3>
  * <p>
- * {@code allowCredentials(true)} 是阶段三 Token Cookie 下发机制的必要条件：
+ * {@code allowCredentials(true)} 是 Token Cookie 下发机制的必要条件：
  * 浏览器在跨域请求携带 Cookie 时，要求响应头显式声明允许携带凭证，
  * 否则浏览器会拒绝读取响应并丢弃 Set-Cookie 头。
  * </p>
@@ -53,8 +43,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     /**
      * 注册自定义拦截器
      * <p>
-     * 阶段三已移除所有认证相关拦截器（JwtTokenAdminInterceptor / SecurityContextToBaseContextInterceptor），
-     * 当前仅保留 API 缓存控制拦截器。
+     * 当前仅保留 API 缓存控制拦截器，认证由 Spring Security Resource Server 统一接管。
      * </p>
      *
      * @param registry 拦截器注册器
@@ -92,7 +81,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
                 .allowedOriginPatterns("*")  // 允许所有源，或指定域名
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")  // 允许的HTTP方法
                 .allowedHeaders("*")
-                .allowCredentials(true)  // 阶段三 Cookie 模式必需：允许浏览器跨域携带 Cookie
+                .allowCredentials(true)  // Cookie 模式必需：允许浏览器跨域携带 Cookie
                 .maxAge(3600);  // 预检请求缓存时间
     }
 

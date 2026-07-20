@@ -12,7 +12,7 @@ import org.springframework.util.StringUtils;
 /**
  * 自定义 Bearer Token 解析器:支持 Header + Cookie 双轨模式
  * <p>
- * 阶段三 Token Cookie 下发机制的核心组件之一。
+ * Token Cookie 下发机制的核心组件之一。
  * Spring Security Resource Server 默认仅从 {@code Authorization: Bearer xxx} Header 解析 Token,
  * 本解析器在此基础上扩展支持从 {@code access_token} Cookie 解析,实现双轨兼容。
  * </p>

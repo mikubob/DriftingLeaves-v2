@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 博客端文章点赞接口
  * <p>
- * 阶段四：写接口（POST/DELETE）需 GUEST 角色（由 ResourceServerConfig 控制），
+ * 写接口（POST/DELETE）需 GUEST 角色（由 ResourceServerConfig 控制），
  * userId 由 {@link SecurityUser} 中获取，不再由前端传入。
  * GET 接口公开访问，未登录时 userId 为 null。
  * </p>

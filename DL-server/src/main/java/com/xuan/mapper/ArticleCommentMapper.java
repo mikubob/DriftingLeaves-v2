@@ -22,7 +22,7 @@ public interface ArticleCommentMapper extends BaseMapper<ArticleComments> {
     /**
      * 根据评论ID查询所属文章ID
      * <p>
-     * 用于阶段三 ArticlePermissionService.isCommentInOwnArticle 校验：
+     * 用于 {@link com.xuan.service.ArticlePermissionService#isCommentInOwnArticle} 校验：
      * 先通过评论ID查出 articleId，再判断该文章是否属于当前 AUTHOR 用户。
      * </p>
      *

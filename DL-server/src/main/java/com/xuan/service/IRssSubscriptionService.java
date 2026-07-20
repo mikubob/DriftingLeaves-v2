@@ -12,7 +12,6 @@ import java.util.List;
 public interface IRssSubscriptionService extends IService<RssSubscriptions> {
     /**
      * 添加RSS订阅
-     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      * @param rssSubscriptionDTO
      * @param userId
      */
@@ -55,13 +54,6 @@ public interface IRssSubscriptionService extends IService<RssSubscriptions> {
      * @param email
      */
     void unsubscribeByEmail(String email);
-
-    /**
-     * 检查用户是否已订阅
-     * @param userId
-     * @return
-     */
-    boolean hasSubscribed(Long userId);
 
     /**
      * 获取用户订阅详情

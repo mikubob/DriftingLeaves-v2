@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 博客端 RSS 订阅接口
  * <p>
- * 阶段四：写接口需 GUEST 角色（由 ResourceServerConfig 控制），
+ * 写接口需 GUEST 角色（由 ResourceServerConfig 控制），
  * userId 由 {@link SecurityUser} 中获取，不再由前端传入。
  * unsubscribe 接口由 ResourceServerConfig 单独放行，支持邮件链接匿名退订。
  * </p>

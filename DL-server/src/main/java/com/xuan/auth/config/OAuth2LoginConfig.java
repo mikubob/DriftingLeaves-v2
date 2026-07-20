@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * 第三方 OAuth2 登录配置
  * <p>
- * 阶段四新增：为 GitHub/Gitee 登录配置独立的 SecurityFilterChain。
+ * 为 GitHub/Gitee 登录配置独立的 SecurityFilterChain。
  * </p>
  *
  * <h3>为什么需要独立 FilterChain？</h3>

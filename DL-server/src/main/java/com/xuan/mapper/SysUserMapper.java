@@ -24,7 +24,7 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
     /**
      * 根据第三方平台 + oauthId 查询用户
      * <p>
-     * 阶段四新增：用于 GitHub/Gitee OAuth2 登录时查找已绑定的本地账号。
+     * 用于 GitHub/Gitee OAuth2 登录时查找已绑定的本地账号。
      * </p>
      *
      * @param oauthProvider 第三方平台标识（github / gitee）

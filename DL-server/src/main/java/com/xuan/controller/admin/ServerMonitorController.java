@@ -27,14 +27,6 @@ import java.util.List;
  * 类级 @PreAuthorize：仅 ADMIN 可访问。服务器监控包含 CPU/内存/磁盘/网络等敏感信息，
  * AUDITOR（审计员）和 AUTHOR（创作者）均不可访问。
  * </p>
- * <p>
- * 阶段三改造说明：
- * <ul>
- *     <li>原 checkAdminOnly() 私有方法已删除（基于 BaseContext.getCurrentRole() 判断的旧逻辑）</li>
- *     <li>权限校验统一由类级 @PreAuthorize("hasRole('ADMIN')") 接管，与 Spring Security 体系一致</li>
- *     <li>不再依赖 BaseContext，符合"完全移除 BaseContext"的阶段三目标</li>
- * </ul>
- * </p>
  */
 @Slf4j
 @RestController

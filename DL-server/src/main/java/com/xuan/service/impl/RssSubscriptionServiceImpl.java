@@ -162,22 +162,6 @@ public class RssSubscriptionServiceImpl extends ServiceImpl<RssSubscriptionMappe
     }
 
     /**
-     * 检查用户是否已订阅
-     * @param userId 用户 ID
-     * @return 是否已订阅
-     */
-    @Override
-    public boolean hasSubscribed(Long userId) {
-        if (userId == null) {
-            return false;
-        }
-        return lambdaQuery()
-                .eq(RssSubscriptions::getUserId, userId)
-                .eq(RssSubscriptions::getIsActive, 1)
-                .exists();
-    }
-
-    /**
      * 获取用户订阅详情
      * @param userId 用户 ID
      * @return 订阅详情

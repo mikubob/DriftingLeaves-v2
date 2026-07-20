@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * 文章权限校验服务
  * <p>
- * 阶段三 RBAC 权限模型的核心组件之一，专门为 AUTHOR 角色提供数据范围校验能力。
+ * RBAC 权限模型的核心组件之一，专门为 AUTHOR 角色提供数据范围校验能力。
  * </p>
  * <p>
  * 使用场景：在 Controller 方法级 @PreAuthorize 注解中通过 SpEL 表达式调用，

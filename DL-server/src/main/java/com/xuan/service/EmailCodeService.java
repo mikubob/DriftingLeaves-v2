@@ -58,11 +58,4 @@ public interface EmailCodeService {
      * @return 是否校验通过
      */
     boolean verifyCode(String email, String code);
-
-    /**
-     * 获取剩余尝试次数
-     *
-     * @param email 邮箱
-     */
-    Long getRemainingAttempts(String email);
 }

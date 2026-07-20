@@ -463,7 +463,7 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
     /**
      * 检查父评论是否开启邮箱通知，如果是则发送通知邮件
      * <p>
-     * 阶段四：新架构下父评论作者邮箱从 sys_user 表查询，按 user_id 关联。
+     * 父评论作者邮箱从 sys_user 表查询，按 user_id 关联。
      * </p>
      *
      * @param parentId 父评论 ID

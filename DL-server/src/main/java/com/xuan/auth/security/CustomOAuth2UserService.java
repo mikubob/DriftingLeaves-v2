@@ -30,7 +30,7 @@ import java.util.UUID;
 /**
  * 第三方 OAuth2 登录用户信息服务
  * <p>
- * 阶段四新增：处理 GitHub/Gitee 登录回调，将第三方用户信息映射到本地 sys_user。
+ * 处理 GitHub/Gitee 登录回调，将第三方用户信息映射到本地 sys_user。
  * </p>
  *
  * <h3>核心职责</h3>

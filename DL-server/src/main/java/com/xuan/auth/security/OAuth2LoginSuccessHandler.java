@@ -42,7 +42,7 @@ import java.util.Map;
 /**
  * 第三方 OAuth2 登录成功处理器
  * <p>
- * 阶段四新增:GitHub/Gitee 登录成功后,将 OAuth2 身份转换为本项目标准的 JWT Token,
+ * GitHub/Gitee 登录成功后,将 OAuth2 身份转换为本项目标准的 JWT Token,
  * 写入 HttpOnly Cookie,并重定向到前端首页。
  * </p>
  *

@@ -103,22 +103,14 @@ public class SaveLogAsyncServiceImpl implements SaveLogAsyncService {
      * 会记录操作类型、操作目标、操作时间、操作结果、操作用户、目标 ID 和操作数据等信息。
      * </p>
      *
-     * <h3>阶段三改造说明</h3>
-     * <p>
-     * 移除了对 {@code BaseContext.getCurrentId()} 的依赖（BaseContext 已在阶段三完全删除）。
-     * userId 由调用方（{@link com.xuan.aspect.OperationLogAspect}）在请求线程内
-     * 从 {@code SecurityContextHolder} 提取后传入，避免 @Async 线程无法访问 ThreadLocal 上下文。
-     * </p>
-     *
      * @param joinPoint    切点，包含被拦截方法的信息
-     * @param result       方法执行结果（暂未使用）
      * @param error        方法执行异常，不为 null 表示操作失败
      * @param operationLog 操作日志注解，包含操作类型、目标等信息
-     * @param userId       当前操作用户 ID（由调用方在请求线程内提取并传入）
+     * @param userId       当前操作用户 ID（由调用方在请求线程内提取并传入，避免 @Async 线程无法访问 ThreadLocal 上下文）
      */
     @Async("taskExecutor")
     @Override
-    public void saveLogAsync(JoinPoint joinPoint, Object result,
+    public void saveLogAsync(JoinPoint joinPoint,
                              Throwable error, OperationLog operationLog, Long userId) {
         OperationLogs operationLogs = new OperationLogs();
 

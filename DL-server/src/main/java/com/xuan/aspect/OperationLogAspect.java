@@ -24,15 +24,6 @@ import java.lang.reflect.Method;
  * 拦截所有标注 {@link OperationLog} 注解的方法，将操作信息异步保存到数据库。
  * </p>
  *
- * <h3>阶段三改造说明</h3>
- * <p>
- * 移除了对 {@code BaseContext} 的间接依赖。原方案由 {@code SaveLogAsyncServiceImpl}
- * 在 @Async 方法内部通过 {@code BaseContext.getCurrentId()} 获取用户 ID；
- * 阶段三完全移除 BaseContext 后，改为在本切面（请求线程内）从
- * {@link SecurityContextHolder} 提取 {@link SecurityUser#getUserId()}，
- * 然后作为参数传递给 {@link SaveLogAsyncService#saveLogAsync}。
- * </p>
- *
  * <h3>为何要在切面提取 userId？</h3>
  * <ul>
  *     <li>切面的 {@code finally} 块仍在请求线程内执行，{@link SecurityContextHolder} 仍持有上下文</li>
@@ -97,7 +88,7 @@ public class OperationLogAspect {
                 Long userId = getCurrentUserId();
 
                 // 异步记录操作日志（userId 作为参数传入，避免跨线程 ThreadLocal 失效）
-                saveLogAsyncService.saveLogAsync(joinPoint, result, error, operationLog, userId);
+                saveLogAsyncService.saveLogAsync(joinPoint, error, operationLog, userId);
             }
         }
     }

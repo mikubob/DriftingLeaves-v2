@@ -79,6 +79,33 @@
     <logger name="org.apache.coyote" level="ERROR" />
     <logger name="org.apache.catalina" level="ERROR" />
 
+    <!-- 安全扫描日志路由：独立文件，additivity=false 避免混入主日志 -->
+    <!-- 与 SecurityLogConfig#SECURITY_SCAN_LOG 配合使用 -->
+    <springProfile name="prod">
+        <appender name="SECURITY_SCAN_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_HOME}/${APP_NAME}-security-scan.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_HOME}/${APP_NAME}-security-scan-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+                <maxHistory>${MAX_HISTORY}</maxHistory>
+                <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+                <totalSizeCap>500MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <logger name="SECURITY_SCAN" level="WARN" additivity="false">
+            <appender-ref ref="SECURITY_SCAN_FILE" />
+        </logger>
+    </springProfile>
+
+    <!-- 开发/测试环境：扫描日志走控制台，但仍独立路由避免污染 -->
+    <springProfile name="dev,test">
+        <logger name="SECURITY_SCAN" level="WARN" additivity="false">
+            <appender-ref ref="CONSOLE" />
+        </logger>
+    </springProfile>
+
     <!-- 开发/测试环境配置 -->
     <springProfile name="dev,test">
         <!-- 开启 Mapper 的 DEBUG，查看 SQL -->

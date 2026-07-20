@@ -33,13 +33,10 @@
         <commonmark.version>0.21.0</commonmark.version>
         <jsoup.version>1.16.1</jsoup.version>
         <bucket4j-core>8.3.0</bucket4j-core>
-        <bucket4j-jcache>8.3.0</bucket4j-jcache>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <hutool.version>5.8.32</hutool.version>
         <fastjson2.version>2.0.54</fastjson2.version>
         <ip2region.version>3.3.7</ip2region.version>
-        <cache-api>1.1.1</cache-api>
-        <caffeine.version>3.1.6</caffeine.version>
         <oshi.version>7.1.0</oshi.version>
 
     </properties>
@@ -138,12 +135,6 @@
                 <version>${bucket4j-core}</version>
             </dependency>
 
-            <dependency>
-                <groupId>com.bucket4j</groupId>
-                <artifactId>bucket4j-jcache</artifactId>
-                <version>${bucket4j-jcache}</version>
-            </dependency>
-
             <!-- hutool -->
             <dependency>
                 <groupId>cn.hutool</groupId>
@@ -163,20 +154,6 @@
                 <groupId>org.lionsoul</groupId>
                 <artifactId>ip2region</artifactId>
                 <version>${ip2region.version}</version>
-            </dependency>
-
-            <!-- JCache API -->
-            <dependency>
-                <groupId>javax.cache</groupId>
-                <artifactId>cache-api</artifactId>
-                <version>${cache-api}</version>
-            </dependency>
-
-            <!-- Caffeine JCache 实现 - 高性能内存缓存 -->
-            <dependency>
-                <groupId>com.github.ben-manes.caffeine</groupId>
-                <artifactId>jcache</artifactId>
-                <version>${caffeine.version}</version>
             </dependency>
 
             <!-- OSHI 系统信息获取 -->

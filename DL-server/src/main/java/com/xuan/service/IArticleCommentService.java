@@ -60,13 +60,11 @@ public interface IArticleCommentService extends IService<ArticleComments> {
 
     /**
      * 用户提交评论
-     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      */
     void submitComment(ArticleCommentDTO articleCommentDTO, Long userId, HttpServletRequest request);
 
     /**
      * 用户编辑评论
-     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      */
     void editComment(ArticleCommentEditDTO editDTO, Long userId);
 
