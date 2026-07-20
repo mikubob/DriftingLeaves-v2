@@ -13,6 +13,9 @@ import java.io.Serializable;
 
 /**
  * 博客端访客提交文章评论DTO
+ * <p>
+ * 阶段四：移除 userId 字段，userId 由 Controller 从 SecurityContext 中获取后传入 Service。
+ * </p>
  */
 @Data
 @Builder
@@ -41,10 +44,6 @@ public class ArticleCommentDTO implements Serializable {
     @NotBlank(message = "评论内容不能为空")
     @Size(max = 2000, message = "评论内容不能超过2000字")
     private String content;
-
-    // 评论用户ID
-    @NotNull(message = "用户ID不能为空")
-    private Long userId;
 
     // 是否使用markdown
     private Integer isMarkdown;

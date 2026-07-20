@@ -32,9 +32,10 @@ public class RssSubscriptionServiceImpl extends ServiceImpl<RssSubscriptionMappe
     /**
      * 添加 RSS 订阅
      * @param rssSubscriptionDTO 订阅数据
+     * @param userId 当前登录用户 ID（由 Controller 从 SecurityContext 取出）
      */
     @Override
-    public void addSubscription(RssSubscriptionDTO rssSubscriptionDTO) {
+    public void addSubscription(RssSubscriptionDTO rssSubscriptionDTO, Long userId) {
         // 检查邮箱是否已存在
         LambdaQueryWrapper<RssSubscriptions> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RssSubscriptions::getEmail, rssSubscriptionDTO.getEmail());
@@ -53,7 +54,7 @@ public class RssSubscriptionServiceImpl extends ServiceImpl<RssSubscriptionMappe
         } else {
             // 新增订阅
             RssSubscriptions rssSubscriptions = RssSubscriptions.builder()
-                    .userId(rssSubscriptionDTO.getUserId())
+                    .userId(userId)
                     .nickname(rssSubscriptionDTO.getNickname())
                     .email(rssSubscriptionDTO.getEmail())
                     .isActive(1)

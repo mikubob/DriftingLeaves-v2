@@ -16,4 +16,12 @@ public interface AsyncEmailService {
      */
     void sendNewArticleNotificationAsync(String toEmail, String nickname, String articleTitle,
                                          String articleSummary, String articleUrl);
+
+    /**
+     * 异步发送邮箱验证码邮件（博客端注册/登录使用）
+     *
+     * @param toEmail 收件人邮箱
+     * @param code    验证码
+     */
+    void sendVerifyCodeAsync(String toEmail, String code);
 }

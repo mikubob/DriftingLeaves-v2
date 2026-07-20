@@ -16,6 +16,12 @@ public class RedisConstant {
     public static final String KEY_LOCK_PREFIX = "verify:lock:";
     public static final String VISITOR_KEY = "visitor:fingerprint:";
 
+    // 博客端邮箱验证码相关 Redis Key 前缀（按 email 维度隔离）
+    public static final String KEY_EMAIL_VERIFY_CODE_PREFIX = "verify:email:code:";
+    public static final String KEY_EMAIL_RATE_LIMIT_PREFIX = "verify:email:rate:";
+    public static final String KEY_EMAIL_ATTEMPT_COUNT_PREFIX = "verify:email:attempt:";
+    public static final String KEY_EMAIL_LOCK_PREFIX = "verify:email:lock:";
+
     public static final String KEY_LOGIN_ATTEMPT_PREFIX = "login:attempt:ip:";
     public static final String KEY_LOGIN_LOCK_PREFIX = "login:lock:ip:";
 

@@ -58,7 +58,13 @@ import java.nio.charset.StandardCharsets;
  * POST   /admin/**                      → hasAnyRole('ADMIN','AUTHOR')（后台写权限，AUDITOR 排除）
  * PUT    /admin/**                      → hasAnyRole('ADMIN','AUTHOR')
  * DELETE /admin/**                      → hasAnyRole('ADMIN','AUTHOR')
- * other                                  → permitAll（blog/cv/home 在阶段四处理）
+ * /blog/auth/**                         → permitAll（注册、发送验证码）
+ * PUT    /blog/rssSubscription/unsubscribe → permitAll（RSS 邮件链接匿名退订）
+ * GET    /blog/**                       → permitAll（博客端读公开）
+ * POST   /blog/**                       → hasRole('GUEST')（博客端写需 GUEST 角色）
+ * PUT    /blog/**                       → hasRole('GUEST')
+ * DELETE /blog/**                       → hasRole('GUEST')
+ * other                                  → permitAll（cv/home/health 公开）
  * </pre>
  *
  * @author xuan
@@ -123,7 +129,25 @@ public class ResourceServerConfig {
                         .requestMatchers(HttpMethod.PUT, "/admin/**").hasAnyRole("ADMIN", "AUTHOR")
                         .requestMatchers(HttpMethod.DELETE, "/admin/**").hasAnyRole("ADMIN", "AUTHOR")
 
-                        // 其他路径：暂时放行（blog/cv/home 在阶段四处理）
+                        // ===== 博客端权限规则（阶段四新增） =====
+                        // 博客端认证接口：注册、发送验证码（无需登录）
+                        .requestMatchers("/blog/auth/**").permitAll()
+
+                        // RSS 邮件链接匿名退订：通过邮件中的链接点击访问，无需登录
+                        .requestMatchers(HttpMethod.PUT, "/blog/rssSubscription/unsubscribe").permitAll()
+
+                        // 博客端读接口：公开阅读（文章列表、详情、留言查看、订阅状态等）
+                        // 注意：部分 GET 接口需要根据登录状态展示不同内容（如未审核评论），
+                        //       Controller 中可通过 @AuthenticationPrincipal 可选注入 SecurityUser
+                        .requestMatchers(HttpMethod.GET, "/blog/**").permitAll()
+
+                        // 博客端写接口：必须 GUEST 角色（评论、点赞、留言、订阅等）
+                        // 注意：AUDITOR/ADMIN 若无 GUEST 角色也无法操作，建议管理员账号同时关联 GUEST
+                        .requestMatchers(HttpMethod.POST, "/blog/**").hasRole("GUEST")
+                        .requestMatchers(HttpMethod.PUT, "/blog/**").hasRole("GUEST")
+                        .requestMatchers(HttpMethod.DELETE, "/blog/**").hasRole("GUEST")
+
+                        // 其他路径：放行（cv/home/health 等公开接口）
                         .anyRequest().permitAll()
                 );
         return http.build();

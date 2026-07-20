@@ -12,9 +12,11 @@ import java.util.List;
 public interface IRssSubscriptionService extends IService<RssSubscriptions> {
     /**
      * 添加RSS订阅
+     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      * @param rssSubscriptionDTO
+     * @param userId
      */
-    void addSubscription(RssSubscriptionDTO rssSubscriptionDTO);
+    void addSubscription(RssSubscriptionDTO rssSubscriptionDTO, Long userId);
 
     /**
      * 分页查询RSS订阅列表

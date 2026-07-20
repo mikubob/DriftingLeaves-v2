@@ -10,4 +10,11 @@
         WHERE ur.user_id = #{userId}
     </select>
 
+    <select id="selectRoleIdByCode" resultType="java.lang.Long">
+        SELECT id
+        FROM sys_role
+        WHERE role_code = #{roleCode}
+        LIMIT 1
+    </select>
+
 </mapper>

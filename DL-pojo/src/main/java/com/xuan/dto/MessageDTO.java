@@ -13,6 +13,9 @@ import java.io.Serializable;
 
 /**
  * 访客提交留言DTO
+ * <p>
+ * 阶段四：移除 userId 字段，userId 由 Controller 从 SecurityContext 中获取后传入 Service。
+ * </p>
  */
 @Data
 @Builder
@@ -37,10 +40,6 @@ public class MessageDTO implements Serializable {
     // 父留言昵称
     @Size(max = 15, message = "父留言昵称不能超过15字")
     private String parentNickname;
-
-    // 留言用户ID
-    @NotNull(message = "用户ID不能为空")
-    private Long userId;
 
     // 是否使用markdown，0-否，1-是
     private Integer isMarkdown;

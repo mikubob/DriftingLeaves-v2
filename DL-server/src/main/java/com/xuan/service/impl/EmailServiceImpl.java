@@ -34,7 +34,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(emailProperties.getFrom(), emailProperties.getPersonal());
             helper.setTo(toEmail);
-            helper.setSubject("【" + websiteProperties.getTitle() + "】管理端-验证码");
+            helper.setSubject("【" + websiteProperties.getTitle() + "】邮箱验证码");
             helper.setText(EmailTemplateUtil.buildSendVerifyCodeEmailContent(code, websiteProperties), true);
             mailSender.send(message);
         } catch (Exception e){

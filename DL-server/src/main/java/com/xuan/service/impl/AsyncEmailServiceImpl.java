@@ -67,4 +67,20 @@ public class AsyncEmailServiceImpl implements AsyncEmailService {
             log.error("异步发送新文章通知邮件失败: to={}, title={}, ex={}", toEmail, articleTitle, e.getMessage());
         }
     }
+
+    /**
+     * 异步发送邮箱验证码邮件（博客端注册/登录使用）
+     *
+     * @param toEmail 收件人邮箱
+     * @param code    验证码
+     */
+    @Override
+    @Async("taskExecutor")
+    public void sendVerifyCodeAsync(String toEmail, String code) {
+        try {
+            emailService.sendVerifyCode(toEmail, code);
+        } catch (Exception e) {
+            log.error("异步发送邮箱验证码邮件失败: to={}, ex={}", toEmail, e.getMessage());
+        }
+    }
 }

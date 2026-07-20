@@ -269,13 +269,16 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
      * 提交评论（添加评论/回复评论）
      *
      * @param articleCommentDTO 评论 DTO
+     * @param userId 当前登录用户 ID（由 Controller 从 SecurityContext 取出）
      * @param request HTTP 请求
      */
     @Override
     @Transactional
-    public void submitComment(ArticleCommentDTO articleCommentDTO, HttpServletRequest request) {
+    public void submitComment(ArticleCommentDTO articleCommentDTO, Long userId, HttpServletRequest request) {
         //1.复制属性
         ArticleComments articleComments = BeanUtil.copyProperties(articleCommentDTO, ArticleComments.class);
+        //1.1 显式设置 userId（DTO 已移除该字段）
+        articleComments.setUserId(userId);
 
         //2.处理 Markdown 内容
         if (articleCommentDTO.getIsMarkdown() != null && articleCommentDTO.getIsMarkdown() == 1) {
@@ -330,16 +333,17 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
      * 访客编辑评论
      *
      * @param editDTO 编辑评论 DTO
+     * @param userId 当前登录用户 ID（由 Controller 从 SecurityContext 取出）
      */
     @Override
-    public void editComment(ArticleCommentEditDTO editDTO) {
+    public void editComment(ArticleCommentEditDTO editDTO, Long userId) {
         //1.查询评论
         ArticleComments comment = getById(editDTO.getId());
         if (comment == null) {
             throw new ValidationException(MessageConstant.COMMENT_NOT_FOUND);
         }
         //2.验证身份
-        if (!comment.getUserId().equals(editDTO.getUserId())) {
+        if (!comment.getUserId().equals(userId)) {
             throw new ValidationException(MessageConstant.COMMENT_NOT_EDIT);
         }
 
@@ -358,7 +362,7 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
         //5.更新评论
         this.updateById(updateComment);
 
-        log.info("用户编辑评论成功：id={}, userId={}", editDTO.getId(), editDTO.getUserId());
+        log.info("用户编辑评论成功：id={}, userId={}", editDTO.getId(), userId);
     }
 
     /**

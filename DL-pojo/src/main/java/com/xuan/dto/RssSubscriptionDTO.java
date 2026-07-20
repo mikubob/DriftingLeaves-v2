@@ -14,6 +14,10 @@ import java.io.Serializable;
 
 /**
  * RSS订阅DTO
+ * <p>
+ * 阶段四：移除 userId 字段，userId 由 Controller 从 SecurityContext 中获取后传入 Service。
+ * 昵称与邮箱亦可从 SecurityUser 直接获取，DTO 仅作覆盖可选。
+ * </p>
  */
 @Data
 @AllArgsConstructor
@@ -23,10 +27,6 @@ public class RssSubscriptionDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    // 用户ID
-    @NotNull(message = "用户ID不能为空")
-    private Long userId;
 
     // 昵称（从 sys_user 同步）
     @Size(max = 15, message = "昵称不能超过15字")

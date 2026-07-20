@@ -39,4 +39,13 @@ public class MessageConstant {
     public static final String MESSAGE_NOT_FOUND = "留言不存在或已被删除，请刷新后重试";
     public static final String MESSAGE_NOT_EDIT = "无权编辑此留言，请确认是否为本人提交";
     public static final String MESSAGE_NOT_DELETE = "无权删除此留言，请确认是否为本人提交";
+
+    // 博客端注册相关
+    public static final String USERNAME_EXISTS = "用户名已被注册，请更换后重试";
+    public static final String EMAIL_EXISTS = "邮箱已被注册，请直接登录或更换邮箱";
+    public static final String EMAIL_VERIFY_CODE_ERROR = "邮箱验证码错误或已过期";
+    public static final String EMAIL_VERIFY_CODE_LOCKED = "验证码尝试次数过多，已被锁定，请稍后重试";
+    public static final String EMAIL_VERIFY_CODE_COOLDOWN = "验证码发送过于频繁，请稍后重试";
+    public static final String REGISTER_FAILED = "注册失败，请稍后重试";
+    public static final String GUEST_ROLE_NOT_FOUND = "系统角色 GUEST 未初始化，请联系管理员";
 }

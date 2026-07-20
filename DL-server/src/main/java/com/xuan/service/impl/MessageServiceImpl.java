@@ -60,12 +60,15 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
      * 提交留言
      *
      * @param messageDTO 留言数据
+     * @param userId     当前登录用户 ID（由 Controller 从 SecurityContext 取出）
      * @param request    请求对象
      */
     @Override
-    public void submitMessage(MessageDTO messageDTO, HttpServletRequest request) {
+    public void submitMessage(MessageDTO messageDTO, Long userId, HttpServletRequest request) {
         //1.创建留言对象
         Messages messages = BeanUtil.copyProperties(messageDTO, Messages.class);
+        //1.1 显式设置 userId（DTO 已移除该字段）
+        messages.setUserId(userId);
         //2.处理Markdown内容
         if (messageDTO.getIsMarkdown() != null && messageDTO.getIsMarkdown() == 1) {
             // 如果是Markdown，转换为HTML
@@ -306,15 +309,16 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
      * 编辑留言
      *
      * @param editDTO 编辑留言 DTO
+     * @param userId  当前登录用户 ID（由 Controller 从 SecurityContext 取出）
      */
     @Override
-    public void editMessage(MessageEditDTO editDTO) {
+    public void editMessage(MessageEditDTO editDTO, Long userId) {
         //1.查询留言
         Messages messages = getById(editDTO.getId());
         if (messages == null) {
             throw new ValidationException(MessageConstant.MESSAGE_NOT_FOUND);
         }
-        if (!messages.getUserId().equals(editDTO.getUserId())) {
+        if (!messages.getUserId().equals(userId)) {
             throw new ValidationException(MessageConstant.MESSAGE_NOT_EDIT);
         }
 
@@ -331,7 +335,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
 
         //3.更新数据库
         updateById(updateMessage);
-        log.info("用户编辑留言成功: id={}, userId={}", editDTO.getId(), editDTO.getUserId());
+        log.info("用户编辑留言成功: id={}, userId={}", editDTO.getId(), userId);
     }
 
     /**

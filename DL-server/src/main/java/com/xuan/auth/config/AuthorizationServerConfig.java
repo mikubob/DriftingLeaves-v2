@@ -2,6 +2,8 @@ package com.xuan.auth.config;
 
 import com.xuan.auth.security.AdminPasswordCodeAuthenticationConverter;
 import com.xuan.auth.security.AdminPasswordCodeAuthenticationProvider;
+import com.xuan.auth.security.EmailCodeAuthenticationConverter;
+import com.xuan.auth.security.EmailCodeAuthenticationProvider;
 import com.xuan.auth.security.OAuth2TokenResponseCookieHandler;
 import com.xuan.auth.util.Jwks;
 import org.springframework.security.oauth2.server.authorization.web.authentication.OAuth2AccessTokenResponseAuthenticationSuccessHandler;
@@ -74,14 +76,20 @@ public class AuthorizationServerConfig {
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http,
                                                                       AdminPasswordCodeAuthenticationConverter adminPasswordCodeAuthenticationConverter,
-                                                                      AdminPasswordCodeAuthenticationProvider adminPasswordCodeAuthenticationProvider) throws Exception {
+                                                                      AdminPasswordCodeAuthenticationProvider adminPasswordCodeAuthenticationProvider,
+                                                                      EmailCodeAuthenticationConverter emailCodeAuthenticationConverter,
+                                                                      EmailCodeAuthenticationProvider emailCodeAuthenticationProvider) throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults())
                 // 注册自定义 grant type 的转换器和认证提供者
+                // - admin_password_code：管理端用户名+密码+验证码登录
+                // - email_code：博客端邮箱+验证码登录（阶段四新增）
                 .tokenEndpoint(tokenEndpoint -> tokenEndpoint
                         .accessTokenRequestConverter(adminPasswordCodeAuthenticationConverter)
+                        .accessTokenRequestConverter(emailCodeAuthenticationConverter)
                         .authenticationProvider(adminPasswordCodeAuthenticationProvider)
+                        .authenticationProvider(emailCodeAuthenticationProvider)
                         // 注册 Token 响应 Cookie 处理器：在默认 JSON 响应基础上追加 HttpOnly Cookie 下发
                         // 包装模式：OAuth2TokenResponseCookieHandler 内部委托给默认的
                         // OAuth2AccessTokenResponseAuthenticationSuccessHandler 输出 JSON 响应体

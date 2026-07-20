@@ -19,10 +19,12 @@ public interface IMessageService extends IService<Messages> {
 
     /**
      * 访客提交留言
+     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      * @param messageDTO
+     * @param userId
      * @param request
      */
-    void submitMessage(MessageDTO messageDTO, HttpServletRequest request);
+    void submitMessage(MessageDTO messageDTO, Long userId, HttpServletRequest request);
 
     /**
      * 分页条件查询留言
@@ -58,8 +60,9 @@ public interface IMessageService extends IService<Messages> {
 
     /**
      * 用户编辑留言
+     * <p>阶段四：userId 由 Controller 从 SecurityContext 取出后显式传入。</p>
      */
-    void editMessage(MessageEditDTO editDTO);
+    void editMessage(MessageEditDTO editDTO, Long userId);
 
     /**
      * 用户删除留言
