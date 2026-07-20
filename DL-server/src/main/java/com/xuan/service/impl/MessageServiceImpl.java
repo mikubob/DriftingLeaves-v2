@@ -12,8 +12,10 @@ import com.xuan.dto.MessageEditDTO;
 import com.xuan.dto.MessagePageQueryDTO;
 import com.xuan.dto.MessageReplyDTO;
 import com.xuan.entity.Messages;
+import com.xuan.entity.SysUser;
 import com.xuan.exception.ValidationException;
 import com.xuan.mapper.MessageMapper;
+import com.xuan.mapper.SysUserMapper;
 import com.xuan.properties.WebsiteProperties;
 import com.xuan.result.PageResult;
 import com.xuan.service.AsyncEmailService;
@@ -47,6 +49,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
     private final UserAgentService userAgentService;
     private final AsyncEmailService asyncEmailService;
     private final WebsiteProperties websiteProperties;
+    private final SysUserMapper sysUserMapper;
 
     // 邮箱正则
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
@@ -375,6 +378,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
 
     /**
      * 检查父留言是否开启邮箱通知，如果是则发送通知邮件
+     * <p>
+     * 阶段四：新架构下父留言作者邮箱从 sys_user 表查询，按 user_id 关联。
+     * </p>
      *
      * @param parentId      父留言ID
      * @param replyNickname 回复者昵称
@@ -389,12 +395,37 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
         try {
             //2.查询父留言
             Messages parentMessage = getById(parentId);
-            // TODO: 新架构下留言通知需从 sys_user 表查询邮箱，后续在阶段四中完善
-            if (parentMessage != null
-                    && parentMessage.getIsNotice() != null
-                    && parentMessage.getIsNotice() == 1) {
-                log.debug("留言回复通知待完善：parentId={}", parentId);
+            if (parentMessage == null
+                    || parentMessage.getIsNotice() == null
+                    || parentMessage.getIsNotice() != 1) {
+                return;
             }
+
+            //3.父留言作者必须存在 userId（旧匿名数据可能为 null，跳过通知）
+            Long parentUserId = parentMessage.getUserId();
+            if (parentUserId == null) {
+                return;
+            }
+
+            //4.通过 sys_user 查询父留言作者的邮箱与昵称
+            SysUser parentUser = sysUserMapper.selectById(parentUserId);
+            if (parentUser == null
+                    || parentUser.getEmail() == null
+                    || parentUser.getEmail().isEmpty()) {
+                return;
+            }
+
+            //5.异步发送回复通知邮件
+            asyncEmailService.sendReplyNotificationAsync(
+                    parentUser.getEmail(),
+                    parentUser.getNickname(),
+                    parentMessage.getContent(),
+                    replyNickname,
+                    replyContent,
+                    type
+            );
+
+            log.info("留言回复通知已派发: parentId={}, toEmail={}", parentId, parentUser.getEmail());
         } catch (Exception e) {
             log.error("发送留言回复通知邮件异常: parentId={}, ex={}", parentId, e.getMessage());
         }

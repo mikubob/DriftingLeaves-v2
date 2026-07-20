@@ -13,8 +13,10 @@ import com.xuan.dto.ArticleCommentPageQueryDTO;
 import com.xuan.dto.ArticleCommentReplyDTO;
 import com.xuan.entity.ArticleComments;
 import com.xuan.entity.Articles;
+import com.xuan.entity.SysUser;
 import com.xuan.exception.ValidationException;
 import com.xuan.mapper.ArticleCommentMapper;
+import com.xuan.mapper.SysUserMapper;
 import com.xuan.properties.WebsiteProperties;
 import com.xuan.result.PageResult;
 import com.xuan.service.AsyncEmailService;
@@ -49,6 +51,7 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
     private final AsyncEmailService asyncEmailService;
     private final WebsiteProperties websiteProperties;
     private final ArticleCommentMapper articleCommentMapper;
+    private final SysUserMapper sysUserMapper;
 
     /**
      * 分页查询评论
@@ -459,6 +462,9 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
 
     /**
      * 检查父评论是否开启邮箱通知，如果是则发送通知邮件
+     * <p>
+     * 阶段四：新架构下父评论作者邮箱从 sys_user 表查询，按 user_id 关联。
+     * </p>
      *
      * @param parentId 父评论 ID
      * @param replyNickname 回复者昵称
@@ -472,12 +478,37 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
 
         try {
             ArticleComments parentComment = getById(parentId);
-            // TODO: 新架构下评论通知需从 sys_user 表查询邮箱，后续在阶段四中完善
-            if (parentComment != null
-                    && parentComment.getIsNotice() != null
-                    && parentComment.getIsNotice() == 1) {
-                log.debug("评论回复通知待完善：parentId={}", parentId);
+            if (parentComment == null
+                    || parentComment.getIsNotice() == null
+                    || parentComment.getIsNotice() != 1) {
+                return;
             }
+
+            // 父评论作者必须存在 userId（旧匿名数据可能为 null，跳过通知）
+            Long parentUserId = parentComment.getUserId();
+            if (parentUserId == null) {
+                return;
+            }
+
+            // 通过 sys_user 查询父评论作者的邮箱与昵称
+            SysUser parentUser = sysUserMapper.selectById(parentUserId);
+            if (parentUser == null
+                    || parentUser.getEmail() == null
+                    || parentUser.getEmail().isEmpty()) {
+                return;
+            }
+
+            // 异步发送回复通知邮件
+            asyncEmailService.sendReplyNotificationAsync(
+                    parentUser.getEmail(),
+                    parentUser.getNickname(),
+                    parentComment.getContent(),
+                    replyNickname,
+                    replyContent,
+                    type
+            );
+
+            log.info("评论回复通知已派发: parentId={}, toEmail={}", parentId, parentUser.getEmail());
         } catch (Exception e) {
             log.error("发送评论回复通知邮件异常：parentId={}, ex={}", parentId, e.getMessage());
         }

@@ -43,6 +43,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
+        <!--spring oauth2 client（阶段四新增：用于 GitHub/Gitee 第三方登录）-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
         <!--spring boot test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

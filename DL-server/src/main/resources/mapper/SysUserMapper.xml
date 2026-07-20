@@ -17,4 +17,12 @@
         LIMIT 1
     </select>
 
+    <select id="selectByOAuth" resultType="com.xuan.entity.SysUser">
+        SELECT *
+        FROM sys_user
+        WHERE oauth_provider = #{oauthProvider}
+          AND oauth_id = #{oauthId}
+        LIMIT 1
+    </select>
+
 </mapper>

@@ -52,6 +52,8 @@ import java.nio.charset.StandardCharsets;
  *
  * <h3>URL 权限规则（按匹配顺序）</h3>
  * <pre>
+ * /oauth2/authorization/**              → 由 @Order(3) OAuth2LoginConfig 链处理（GitHub/Gitee 发起）
+ * /login/oauth2/code/**                 → 由 @Order(3) OAuth2LoginConfig 链处理（GitHub/Gitee 回调）
  * /oauth2/**                            → permitAll（SAS 自身端点，由 @Order(1) 链处理）
  * /admin/server-monitor/**              → hasRole('ADMIN')（敏感信息仅 ADMIN）
  * GET    /admin/**                      → hasAnyRole('ADMIN','AUTHOR','AUDITOR')（后台读权限）
@@ -112,8 +114,9 @@ public class ResourceServerConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         // 公开端点（无需认证）
+                        // /oauth2/authorization/** 和 /login/oauth2/code/** 由 @Order(3) OAuth2LoginConfig 链优先处理
                         // /oauth2/** 由 @Order(1) 授权服务器链优先处理，这里 permitAll 仅作兜底
-                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
 
                         // 敏感路径：仅 ADMIN 可访问
                         // 服务器监控包含 CPU/内存/磁盘等敏感信息，仅 ADMIN
