@@ -2,14 +2,23 @@ package com.xuan.auth.config;
 
 import com.xuan.auth.security.CustomOAuth2UserService;
 import com.xuan.auth.security.OAuth2LoginSuccessHandler;
+import com.xuan.properties.OAuth2LoginProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 第三方 OAuth2 登录配置
@@ -28,7 +37,6 @@ import org.springframework.security.web.SecurityFilterChain;
  * <ul>
  *     <li>{@code /oauth2/authorization/github} / {@code /oauth2/authorization/gitee}：发起 OAuth2 登录</li>
  *     <li>{@code /login/oauth2/code/github} / {@code /login/oauth2/code/gitee}：OAuth2 回调</li>
- *     <li>{@code /login/oauth2/code/*}：通用 OAuth2 回调路径</li>
  * </ul>
  *
  * <p>该链使用 {@code IF_REQUIRED} session 策略：仅 OAuth2 流程需要时才创建 Session，
@@ -42,8 +50,16 @@ import org.springframework.security.web.SecurityFilterChain;
  *     <tr><td>3</td><td>OAuth2LoginConfig（本类）</td><td>/oauth2/authorization/**、/login/oauth2/code/**</td></tr>
  * </table>
  *
- * <p>注意：{@code @Order(3)} 低于 {@code @Order(2)}，但 securityMatcher 限制了仅 OAuth2 登录路径才会命中本链，
- * 不会与 ResourceServerConfig 冲突。</p>
+ * <h3>ClientRegistration 注册策略</h3>
+ * <p>
+ * 不使用 {@code spring.security.oauth2.client} 自动配置（其要求 client-id 必须非空，开发期未配置会启动失败），
+ * 改为读取 {@link OAuth2LoginProperties}（{@code dl.oauth2.*}）手动构建 ClientRegistrationRepository。
+ * </p>
+ * <ul>
+ *     <li>{@code dl.oauth2.github.client-id} 非空 → 注册 GitHub</li>
+ *     <li>{@code dl.oauth2.gitee.client-id} 非空 → 注册 Gitee</li>
+ *     <li>两者都为空 → 不注册 ClientRegistrationRepository Bean，OAuth2LoginSecurityFilterChain 也不创建</li>
+ * </ul>
  *
  * <h3>登录流程</h3>
  * <pre>
@@ -72,14 +88,150 @@ import org.springframework.security.web.SecurityFilterChain;
 public class OAuth2LoginConfig {
 
     /**
-     * OAuth2 登录安全过滤器链
+     * GitHub OAuth2 提供商通用配置
      * <p>
-     * 仅处理 OAuth2 登录相关路径，其他请求由 ResourceServerConfig 处理。
+     * GitHub 的 OAuth2 端点固定，参考：
+     * https://docs.github.com/zh/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
+     * </p>
+     */
+    private static final String GITHUB_AUTHORIZATION_URI = "https://github.com/login/oauth/authorize";
+    private static final String GITHUB_TOKEN_URI = "https://github.com/login/oauth/access_token";
+    private static final String GITHUB_USER_INFO_URI = "https://api.github.com/user";
+    private static final String GITHUB_USER_NAME_ATTRIBUTE = "id";
+
+    /**
+     * Gitee OAuth2 提供商通用配置
+     * <p>
+     * Gitee 的 OAuth2 端点固定，参考：
+     * https://gitee.com/api/v5/oauth_doc
+     * </p>
+     */
+    private static final String GITEE_AUTHORIZATION_URI = "https://gitee.com/oauth/authorize";
+    private static final String GITEE_TOKEN_URI = "https://gitee.com/oauth/token";
+    private static final String GITEE_USER_INFO_URI = "https://gitee.com/api/v5/user";
+    private static final String GITEE_USER_NAME_ATTRIBUTE = "id";
+
+    /**
+     * ClientRegistrationRepository Bean
+     * <p>
+     * 仅在至少有一个第三方平台（GitHub/Gitee）配置了完整的 client-id 和 client-secret 时才创建。
+     * 都未配置时不创建 Bean（通过自定义 {@link OAuth2ClientConfiguredCondition} 控制），
+     * {@link #oauth2LoginSecurityFilterChain} 也不会注册。
+     * </p>
+     * <p>
+     * 不能用 {@code @ConditionalOnBean(OAuth2LoginProperties.class)}，
+     * 因为 OAuth2LoginProperties 是 {@code @Component} 永远会注册，条件永远成立。
+     * 也不能用 {@code @ConditionalOnProperty}，因为空字符串仍视为"存在"。
+     * 改用自定义 Condition 调用 {@link OAuth2LoginProperties#hasAnyConfigured()} 严格判断。
      * </p>
      */
     @Bean
+    @org.springframework.context.annotation.Conditional(OAuth2LoginConfig.OAuth2ClientConfiguredCondition.class)
+    public ClientRegistrationRepository clientRegistrationRepository(OAuth2LoginProperties properties) {
+        List<ClientRegistration> registrations = new ArrayList<>();
+
+        // GitHub
+        if (properties.isGithubConfigured()) {
+            registrations.add(buildGithubRegistration(
+                    properties.getGithub().getClientId(),
+                    properties.getGithub().getClientSecret()));
+        }
+
+        // Gitee
+        if (properties.isGiteeConfigured()) {
+            registrations.add(buildGiteeRegistration(
+                    properties.getGitee().getClientId(),
+                    properties.getGitee().getClientSecret()));
+        }
+
+        // 此处 registrations 一定非空（Condition 已保证），无需再判空
+        return new InMemoryClientRegistrationRepository(registrations);
+    }
+
+    /**
+     * 自定义条件：仅当 {@link OAuth2LoginProperties#hasAnyConfigured()} 返回 true 时才匹配
+     * <p>
+     * 用于精确控制 {@link #clientRegistrationRepository} 和 {@link #oauth2LoginSecurityFilterChain}
+     * 两个 Bean 的创建：未配置任何第三方平台时不创建这两个 Bean，应用正常启动。
+     * </p>
+     * <p>
+     * 实现说明：通过 {@link org.springframework.core.env.Environment} 直接读取配置项，
+     * 避免在 Condition 阶段提前实例化 OAuth2LoginProperties Bean（防止 Bean 创建顺序问题）。
+     * </p>
+     */
+    public static class OAuth2ClientConfiguredCondition implements org.springframework.context.annotation.Condition {
+        @Override
+        public boolean matches(org.springframework.context.annotation.ConditionContext context,
+                               org.springframework.core.type.AnnotatedTypeMetadata metadata) {
+            org.springframework.core.env.Environment env = context.getEnvironment();
+            String githubClientId = env.getProperty("dl.oauth2.github.client-id", "");
+            String githubClientSecret = env.getProperty("dl.oauth2.github.client-secret", "");
+            String giteeClientId = env.getProperty("dl.oauth2.gitee.client-id", "");
+            String giteeClientSecret = env.getProperty("dl.oauth2.gitee.client-secret", "");
+
+            boolean githubConfigured = isNonEmpty(githubClientId) && isNonEmpty(githubClientSecret);
+            boolean giteeConfigured = isNonEmpty(giteeClientId) && isNonEmpty(giteeClientSecret);
+
+            return githubConfigured || giteeConfigured;
+        }
+
+        private static boolean isNonEmpty(String value) {
+            return value != null && !value.trim().isEmpty();
+        }
+    }
+
+    /**
+     * 构建 GitHub ClientRegistration
+     */
+    private ClientRegistration buildGithubRegistration(String clientId, String clientSecret) {
+        return ClientRegistration.withRegistrationId("github")
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .scope("read:user", "user:email")
+                .authorizationUri(GITHUB_AUTHORIZATION_URI)
+                .tokenUri(GITHUB_TOKEN_URI)
+                .userInfoUri(GITHUB_USER_INFO_URI)
+                .userNameAttributeName(GITHUB_USER_NAME_ATTRIBUTE)
+                .clientName("GitHub")
+                .build();
+    }
+
+    /**
+     * 构建 Gitee ClientRegistration
+     * <p>
+     * 注意：Gitee 不支持 client_secret_basic（Basic Auth），需用 client_secret_post
+     * </p>
+     */
+    private ClientRegistration buildGiteeRegistration(String clientId, String clientSecret) {
+        return ClientRegistration.withRegistrationId("gitee")
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .scope("user_info", "emails")
+                .authorizationUri(GITEE_AUTHORIZATION_URI)
+                .tokenUri(GITEE_TOKEN_URI)
+                .userInfoUri(GITEE_USER_INFO_URI)
+                .userNameAttributeName(GITEE_USER_NAME_ATTRIBUTE)
+                .clientName("Gitee")
+                .build();
+    }
+
+    /**
+     * OAuth2 登录安全过滤器链
+     * <p>
+     * 仅当 ClientRegistrationRepository Bean 存在时才创建（即至少配置了一个第三方平台）。
+     * </p>
+     */
+    @Bean
+    @org.springframework.context.annotation.Conditional(OAuth2LoginConfig.OAuth2ClientConfiguredCondition.class)
     @Order(3)
     public SecurityFilterChain oauth2LoginSecurityFilterChain(HttpSecurity http,
+                                                               ClientRegistrationRepository clientRegistrationRepository,
                                                                CustomOAuth2UserService customOAuth2UserService,
                                                                JwtEncoder jwtEncoder) throws Exception {
         http
@@ -91,6 +243,8 @@ public class OAuth2LoginConfig {
                 .csrf(csrf -> csrf.disable())   // OAuth2 流程禁用 CSRF（POST 回调由 Spring Security 处理）
                 // IF_REQUIRED：仅 OAuth2 流程需要时才创建 Session，回调完成后 Session 可清理
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                // ClientRegistrationRepository 由 Spring Security OAuth2 Client 自动配置拾取
+                // （InMemoryClientRegistrationRepository Bean 被自动注入到 OAuth2LoginAuthenticationFilter）
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
