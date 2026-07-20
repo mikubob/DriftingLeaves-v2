@@ -25,7 +25,6 @@
         <mysql.version>8.0.33</mysql.version>
         <lombok>1.18.40</lombok>
 
-        <jjwt>0.12.5</jjwt>
         <aliyun-sdk-oss>3.17.4</aliyun-sdk-oss>
         <druid.version>1.2.23</druid.version>
         <thumbnailator>0.4.20</thumbnailator>
@@ -60,25 +59,6 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
-            </dependency>
-
-            <!-- Spring Boot 3.x 的 JWT -->
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-api</artifactId>
-                <version>${jjwt}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-impl</artifactId>
-                <version>${jjwt}</version>
-                <scope>runtime</scope>
-            </dependency>
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-jackson</artifactId>
-                <version>${jjwt}</version>
-                <scope>runtime</scope>
             </dependency>
 
             <!-- 阿里云 OSS -->

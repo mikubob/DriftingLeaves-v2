@@ -9,7 +9,6 @@ public class RedisConstant {
     public static final String LOCK_VIEW_COUNT_SYNC = "lock:viewCountSync";
     public static final String RATE_LIMIT_KEY = "visitor:rate:";
     public static final String BLOCKED_KEY = "visitor:blocked:";
-    public static final String TOKEN_PREFIX = "token:active:";
     public static final String KEY_VERIFY_CODE_PREFIX = "verify:code:";
     public static final String KEY_RATE_LIMIT_PREFIX = "verify:rate:";
     public static final String KEY_ATTEMPT_COUNT_PREFIX = "verify:attempt:";
@@ -21,9 +20,6 @@ public class RedisConstant {
     public static final String KEY_EMAIL_RATE_LIMIT_PREFIX = "verify:email:rate:";
     public static final String KEY_EMAIL_ATTEMPT_COUNT_PREFIX = "verify:email:attempt:";
     public static final String KEY_EMAIL_LOCK_PREFIX = "verify:email:lock:";
-
-    public static final String KEY_LOGIN_ATTEMPT_PREFIX = "login:attempt:ip:";
-    public static final String KEY_LOGIN_LOCK_PREFIX = "login:lock:ip:";
 
     public static final String SERVER_MONITOR_OVERVIEW_TIMELINE = "server:monitor:overview:timeline";
     public static final String SERVER_MONITOR_CURRENT_OVERVIEW = "server:monitor:current:overview";

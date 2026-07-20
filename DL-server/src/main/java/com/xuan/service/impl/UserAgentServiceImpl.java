@@ -55,13 +55,6 @@ public class UserAgentServiceImpl implements UserAgentService {
         
         // 处理 Mac 系列 (macOS, Mac OS X)
         if (osName.startsWith("Mac")) {
-            // 针对 iPadOS 13+ 可能伪装成 Mac 的情况做二次确认
-            // 如果 UA 中包含 iPad 但 OS 识别为 Mac，根据业务需求可强制返回 iOS
-            // 这里保持 Hutool 的默认行为，通常新版 Hutool 能较好区分
-            if (userAgent.contains("iPad") || userAgent.contains("iPhone")) {
-                 // 如果确定是移动设备但被识别为 Mac，可取消下面这行的注释强制转为 iOS
-                 // return "iOS"; 
-            }
             return "macOS";
         }
 
