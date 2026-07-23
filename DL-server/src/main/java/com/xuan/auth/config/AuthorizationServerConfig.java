@@ -6,6 +6,7 @@ import com.xuan.auth.security.EmailCodeAuthenticationConverter;
 import com.xuan.auth.security.EmailCodeAuthenticationProvider;
 import com.xuan.auth.security.OAuth2TokenResponseCookieHandler;
 import com.xuan.auth.util.Jwks;
+import com.xuan.properties.JwkProperties;
 import org.springframework.security.oauth2.server.authorization.web.authentication.OAuth2AccessTokenResponseAuthenticationSuccessHandler;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -83,8 +84,8 @@ public class AuthorizationServerConfig {
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults())
                 // 注册自定义 grant type 的转换器和认证提供者
-                // - admin_password_code：管理端用户名+密码+验证码登录
-                // - email_code：博客端邮箱+验证码登录
+                // - admin_password_code：管理端邮箱+密码+验证码登录
+                // - email_code：博客端邮箱+密码/验证码登录
                 .tokenEndpoint(tokenEndpoint -> tokenEndpoint
                         .accessTokenRequestConverter(adminPasswordCodeAuthenticationConverter)
                         .accessTokenRequestConverter(emailCodeAuthenticationConverter)
@@ -127,10 +128,13 @@ public class AuthorizationServerConfig {
 
     /**
      * JWK 源，用于签名和 JWKS 端点
+     * <p>
+     * 开发环境使用固定密钥（配置在 application-dev.yml 中），避免每次重启后旧 token 失效。
+     * </p>
      */
     @Bean
-    public JWKSource<SecurityContext> jwkSource() {
-        RSAKey rsaKey = Jwks.generateRsa();
+    public JWKSource<SecurityContext> jwkSource(JwkProperties jwkProperties) {
+        RSAKey rsaKey = Jwks.loadRsaKey(jwkProperties);
         JWKSet jwkSet = new JWKSet(rsaKey);
         return (jwkSelector, context) -> jwkSelector.select(jwkSet);
     }

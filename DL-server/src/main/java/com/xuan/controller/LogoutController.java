@@ -64,14 +64,21 @@ public class LogoutController {
         // 1. 从 Cookie 读 access_token,吊销
         String accessToken = CookieUtils.resolveToken(request, CookieConstant.ACCESS_TOKEN_COOKIE_NAME);
         if (accessToken != null) {
-            OAuth2Authorization authorization = authorizationService.findByToken(
-                    accessToken, OAuth2TokenType.ACCESS_TOKEN);
-            if (authorization != null) {
-                authorizationService.remove(authorization);
-                log.info("登出:access_token 已吊销: tokenPrefix={}",
-                        accessToken.substring(0, Math.min(20, accessToken.length())));
-            } else {
-                log.info("登出:access_token 在 oauth2_authorization 表中未找到(可能已过期或为 OAuth2 Login 颁发)");
+            try {
+                OAuth2Authorization authorization = authorizationService.findByToken(
+                        accessToken, OAuth2TokenType.ACCESS_TOKEN);
+                if (authorization != null) {
+                    authorizationService.remove(authorization);
+                    log.info("登出:access_token 已吊销: tokenPrefix={}",
+                            accessToken.substring(0, Math.min(20, accessToken.length())));
+                } else {
+                    log.info("登出:access_token 在 oauth2_authorization 表中未找到(可能已过期或为 OAuth2 Login 颁发)");
+                }
+            } catch (Exception e) {
+                // 兼容历史 authorization 记录:旧记录中的 principal 对象无法被 Jackson 反序列化时,
+                // 仅记录日志,不影响登出清 Cookie 的主流程
+                log.warn("登出:吊销 access_token 时反序列化失败(可能是历史记录格式不兼容), tokenPrefix={}, error={}",
+                        accessToken.substring(0, Math.min(20, accessToken.length())), e.getMessage());
             }
         }
 
@@ -80,11 +87,15 @@ public class LogoutController {
         //    这里再做一次 refresh_token 查找是为了兼容 access_token 已过期、refresh_token 仍有效的场景
         String refreshToken = CookieUtils.resolveToken(request, CookieConstant.REFRESH_TOKEN_COOKIE_NAME);
         if (refreshToken != null) {
-            OAuth2Authorization authorization = authorizationService.findByToken(
-                    refreshToken, OAuth2TokenType.REFRESH_TOKEN);
-            if (authorization != null) {
-                authorizationService.remove(authorization);
-                log.info("登出:refresh_token 已吊销");
+            try {
+                OAuth2Authorization authorization = authorizationService.findByToken(
+                        refreshToken, OAuth2TokenType.REFRESH_TOKEN);
+                if (authorization != null) {
+                    authorizationService.remove(authorization);
+                    log.info("登出:refresh_token 已吊销");
+                }
+            } catch (Exception e) {
+                log.warn("登出:吊销 refresh_token 时反序列化失败(可能是历史记录格式不兼容), error={}", e.getMessage());
             }
         }
 

@@ -363,7 +363,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
      * @return 文章详情
      */
     @Override
-    @Cacheable(value = "articleDetail", key = "#slug")
     public BlogArticleDetailVO getBySlug(String slug) {
         //1.根据slug获取文章详情
         BlogArticleDetailVO articleDetail = baseMapper.getBySlug(slug);

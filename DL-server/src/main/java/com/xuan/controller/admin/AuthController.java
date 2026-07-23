@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 管理端认证接口
  * <p>
- * 管理端登录走自定义 grant_type {@code admin_password_code}(用户名+密码+验证码),
+ * 管理端登录走自定义 grant_type {@code admin_password_code}(邮箱+密码+验证码),
  * 登录本身由 {@link com.xuan.auth.security.AdminPasswordCodeAuthenticationProvider} 在
  * SAS Token Endpoint 处理。本 Controller 仅提供登录前置接口——发送邮箱验证码。
  * </p>

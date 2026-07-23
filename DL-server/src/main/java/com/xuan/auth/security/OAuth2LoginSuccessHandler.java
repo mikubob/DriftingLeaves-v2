@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.stereotype.Component;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -22,12 +23,19 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
 import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContextHolder;
+import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.util.StringUtils;
+
+import jakarta.annotation.PostConstruct;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import java.io.IOException;
 import java.net.URI;
@@ -102,6 +110,7 @@ import java.util.Map;
  * @see EmailCodeAuthenticationProvider 参考其 token 生成与持久化模式
  */
 @Slf4j
+@Component
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
@@ -141,6 +150,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final RegisteredClientRepository registeredClientRepository;
 
     /**
+     * 授权服务器设置(用于在非授权服务器 FilterChain 中构造 AuthorizationServerContext)
+     */
+    private final AuthorizationServerSettings authorizationServerSettings;
+
+    /**
      * 登录成功后重定向的前端 URL(state 参数缺失或校验失败时的 fallback)
      */
     @Value("${dl.oauth2-redirect.success-url:http://localhost:5173/}")
@@ -157,12 +171,61 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
      * </p>
      */
     @Value("${dl.oauth2-redirect.allowed-origins:http://localhost:5173,http://localhost:5174}")
-    private List<String> allowedOrigins;
+    private String allowedOriginsRaw;
+
+    /**
+     * 解析后的白名单源集合(lazy 初始化)
+     */
+    private Set<String> allowedOrigins;
 
     /**
      * JSON 解析器(用于解析 state 中编码的 JSON)
      */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    /**
+     * 初始化白名单集合
+     */
+    @PostConstruct
+    public void initAllowedOrigins() {
+        if (!StringUtils.hasText(allowedOriginsRaw)) {
+            allowedOrigins = Set.of();
+            return;
+        }
+        allowedOrigins = Arrays.stream(allowedOriginsRaw.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        log.info("OAuth2 登录回跳白名单已加载: {}", allowedOrigins);
+    }
+
+    /**
+     * 自定义 AuthorizationServerContext 实现
+     * <p>
+     * OAuth2LoginSuccessHandler 运行在 OAuth2LoginConfig 的 FilterChain 中，
+     * 不在 AuthorizationServerConfig 的 FilterChain 内，因此 AuthorizationServerContextHolder
+     * 不会自动设置。需要手动构造上下文供 OAuth2TokenGenerator 使用。
+     * </p>
+     */
+    private static final class FixedAuthorizationServerContext implements AuthorizationServerContext {
+        private final String issuer;
+        private final AuthorizationServerSettings authorizationServerSettings;
+
+        FixedAuthorizationServerContext(String issuer, AuthorizationServerSettings authorizationServerSettings) {
+            this.issuer = issuer;
+            this.authorizationServerSettings = authorizationServerSettings;
+        }
+
+        @Override
+        public String getIssuer() {
+            return issuer;
+        }
+
+        @Override
+        public AuthorizationServerSettings getAuthorizationServerSettings() {
+            return authorizationServerSettings;
+        }
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -189,6 +252,31 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             return;
         }
 
+        // 3. 手动设置 AuthorizationServerContext(当前不在授权服务器 FilterChain 中)
+        AuthorizationServerContext previousContext = AuthorizationServerContextHolder.getContext();
+        AuthorizationServerContextHolder.setContext(
+                new FixedAuthorizationServerContext(
+                        authorizationServerSettings.getIssuer(),
+                        authorizationServerSettings));
+
+        try {
+            generateTokenAndRedirect(request, response, authentication, localUser, registeredClient);
+        } finally {
+            // 清理上下文，避免影响其他请求
+            if (previousContext != null) {
+                AuthorizationServerContextHolder.setContext(previousContext);
+            } else {
+                AuthorizationServerContextHolder.resetContext();
+            }
+        }
+    }
+
+    /**
+     * 生成 Token、持久化授权记录并重定向
+     */
+    private void generateTokenAndRedirect(HttpServletRequest request, HttpServletResponse response,
+                                          Authentication authentication, SysUser localUser,
+                                          RegisteredClient registeredClient) throws IOException {
         // 3. 构造 principal 为 SecurityUser 的 Authentication
         //    JwtCustomizerConfig 会从 authentication.getPrincipal() 取 SecurityUser,注入 user_id/email 等 claims
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
@@ -322,8 +410,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         }
 
         try {
-            // 1. base64 URL 解码(state 可能由前端用 Base64.getUrlEncoder() 编码)
-            byte[] decoded = Base64.getUrlDecoder().decode(state);
+            // 1. base64 标准解码(前端使用 btoa 标准 Base64 编码)
+            byte[] decoded = Base64.getDecoder().decode(state);
             String json = new String(decoded, StandardCharsets.UTF_8);
 
             // 2. 解析 JSON 取 redirect_uri
@@ -337,8 +425,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
             // 3. 校验白名单(只比较 scheme://host[:port],忽略 path/query/fragment)
             if (!isAllowedOrigin(redirectUri)) {
-                log.warn("OAuth2 state 中的 redirect_uri 不在白名单内,已拦截并 fallback: {}",
-                        redirectUri);
+                log.warn("OAuth2 state 中的 redirect_uri 不在白名单内,已拦截并 fallback: redirectUri={}, allowedOrigins={}",
+                        redirectUri, allowedOrigins);
                 return successRedirectUrl;
             }
 

@@ -232,16 +232,21 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
         //1.查询评论列表（已审核 + 当前用户的未审核评论）
         LambdaQueryWrapper<ArticleComments> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ArticleComments::getArticleId, articleId)
-                .and(w -> w.eq(ArticleComments::getIsApproved, StatusConstant.ENABLE)
-                        .or().eq(ArticleComments::getUserId, userId))
+                .and(w -> {
+                    w.eq(ArticleComments::getIsApproved, StatusConstant.ENABLE);
+                    if (userId != null) {
+                        w.or().eq(ArticleComments::getUserId, userId);
+                    }
+                })
                 .orderByAsc(ArticleComments::getCreateTime);
 
         List<ArticleComments> allComments = this.list(wrapper);
 
-        //2.转换为 VO
+        //2.转换为 VO，并批量填充用户昵称/头像
         List<ArticleCommentVO> allVOs = allComments.stream()
                 .map(this::convertToVO)
                 .toList();
+        fillUserInfo(allVOs);
 
         //3.构建树形结构：根评论作为一级，子评论挂到根评论下
         List<ArticleCommentVO> rootComments = new ArrayList<>();
@@ -428,6 +433,32 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
      */
     private ArticleCommentVO convertToVO(ArticleComments comment) {
         return BeanUtil.copyProperties(comment, ArticleCommentVO.class);
+    }
+
+    /**
+     * 批量填充评论用户昵称与头像
+     */
+    private void fillUserInfo(List<ArticleCommentVO> comments) {
+        if (comments == null || comments.isEmpty()) {
+            return;
+        }
+        List<Long> userIds = comments.stream()
+                .map(ArticleCommentVO::getUserId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        if (userIds.isEmpty()) {
+            return;
+        }
+        Map<Long, SysUser> userMap = sysUserMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, u -> u));
+        for (ArticleCommentVO comment : comments) {
+            SysUser user = userMap.get(comment.getUserId());
+            if (user != null) {
+                comment.setNickname(user.getNickname());
+                comment.setAvatar(user.getAvatar());
+            }
+        }
     }
 
     /**

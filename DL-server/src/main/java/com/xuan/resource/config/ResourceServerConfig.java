@@ -108,6 +108,16 @@ public class ResourceServerConfig {
     @Order(2)
     public SecurityFilterChain resourceServerSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+                // 限定该 filter chain 只处理业务 API 路径，避免与 OAuth2LoginConfig 的 chain 冲突
+                .securityMatcher(
+                        "/admin/**",
+                        "/blog/**",
+                        "/api/**",
+                        "/cv/**",
+                        "/home/**",
+                        "/error",
+                        "/favicon.ico"
+                )
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -118,11 +128,6 @@ public class ResourceServerConfig {
                         .accessDeniedHandler(new CustomAccessDeniedHandler(objectMapper))
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 公开端点（无需认证）
-                        // /oauth2/authorization/** 和 /login/oauth2/code/** 由 @Order(3) OAuth2LoginConfig 链优先处理
-                        // /oauth2/** 由 @Order(1) 授权服务器链优先处理，这里 permitAll 仅作兜底
-                        .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
-
                         // /api/logout：登出接口（决策 2 方案 A），Admin/Blog 共用，token 过期也能调
                         // 必须放在 /admin/** 规则之前，否则会被 hasAnyRole 拦截
                         .requestMatchers("/api/logout").permitAll()

@@ -258,22 +258,20 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
     public List<MessageVO> getMessageTree(Long userId) {
         //1.构建查询条件：已审核通过 或 属于当前用户的留言
         LambdaQueryWrapper<Messages> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.and(wrapper -> wrapper
-                .eq(Messages::getIsApproved, StatusConstant.ENABLE)
-                .or(w -> {
-                    if (userId != null) {
-                        w.eq(Messages::getUserId, userId);
-                    }
-                })
-        ).orderByAsc(Messages::getCreateTime);
+        queryWrapper.eq(Messages::getIsApproved, StatusConstant.ENABLE);
+        if (userId != null) {
+            queryWrapper.or(w -> w.eq(Messages::getUserId, userId));
+        }
+        queryWrapper.orderByAsc(Messages::getCreateTime);
 
         //2.查询所有留言
         List<Messages> allMessages = list(queryWrapper);
 
-        //3.转换为 VO 列表
+        //3.转换为 VO 列表，并批量填充用户昵称/头像
         List<MessageVO> allMessageVOs = allMessages.stream()
                 .map(msg -> BeanUtil.copyProperties(msg, MessageVO.class))
                 .toList();
+        fillUserInfo(allMessageVOs);
 
         //4.构建树形结构
         List<MessageVO> rootMessages = new ArrayList<>();
@@ -364,6 +362,32 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
         log.info("用户删除留言成功: id={}, userId={}", id, userId);
     }
 
+
+    /**
+     * 批量填充留言用户昵称与头像
+     */
+    private void fillUserInfo(List<MessageVO> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+        List<Long> userIds = messages.stream()
+                .map(MessageVO::getUserId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        if (userIds.isEmpty()) {
+            return;
+        }
+        Map<Long, SysUser> userMap = sysUserMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, u -> u));
+        for (MessageVO msg : messages) {
+            SysUser user = userMap.get(msg.getUserId());
+            if (user != null) {
+                msg.setNickname(user.getNickname());
+                msg.setAvatar(user.getAvatar());
+            }
+        }
+    }
 
 //<==========私有辅助方法==========>
 

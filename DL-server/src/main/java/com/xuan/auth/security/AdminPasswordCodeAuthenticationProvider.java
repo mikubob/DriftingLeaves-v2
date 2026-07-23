@@ -1,12 +1,18 @@
 package com.xuan.auth.security;
 
+import com.xuan.entity.SysUser;
+import com.xuan.mapper.OAuth2AuthorizationMapper;
+import com.xuan.mapper.SysUserMapper;
 import com.xuan.service.VerifyCodeService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -31,15 +37,18 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * 管理员用户名/密码/验证码认证提供者
+ * 管理员邮箱/密码/验证码认证提供者
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AdminPasswordCodeAuthenticationProvider implements AuthenticationProvider {
 
     private final UserDetailsService userDetailsService;
+    private final SysUserMapper sysUserMapper;
     private final PasswordEncoder passwordEncoder;
     private final VerifyCodeService verifyCodeService;
+    private final OAuth2AuthorizationMapper authorizationMapper;
     private final OAuth2AuthorizationService authorizationService;
     private final OAuth2TokenGenerator<? extends org.springframework.security.oauth2.core.OAuth2Token> tokenGenerator;
 
@@ -53,7 +62,7 @@ public class AdminPasswordCodeAuthenticationProvider implements AuthenticationPr
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         AdminPasswordCodeAuthenticationToken token = (AdminPasswordCodeAuthenticationToken) authentication;
 
-        String username = (String) token.getPrincipal();
+        String email = (String) token.getPrincipal();
         String password = (String) token.getCredentials();
         String code = token.getCode();
 
@@ -64,24 +73,38 @@ public class AdminPasswordCodeAuthenticationProvider implements AuthenticationPr
             throw new BadCredentialsException("客户端未认证");
         }
 
-        // 2. 加载用户
-        SecurityUser user = (SecurityUser) userDetailsService.loadUserByUsername(username);
-
-        // 3. 校验密码
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new BadCredentialsException("用户名或密码错误");
+        // 2. 根据邮箱查询用户
+        SysUser sysUser = sysUserMapper.selectByEmail(email);
+        if (sysUser == null || sysUser.getStatus() == null || sysUser.getStatus() == 0) {
+            throw new BadCredentialsException("用户不存在或已禁用");
         }
 
-        // 4. 校验邮箱验证码（管理员双因素认证）
+        // 3. 加载完整用户信息（含角色权限）
+        SecurityUser user = (SecurityUser) userDetailsService.loadUserByUsername(sysUser.getUsername());
+
+        // 4. 校验密码
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BadCredentialsException("邮箱或密码错误");
+        }
+
+        // 5. 校验邮箱验证码（管理员双因素认证）
         if (!verifyCode(user.getUserId(), code)) {
             throw new BadCredentialsException("验证码错误或已过期");
         }
 
-        // 5. 构建已认证的用户 Token
+        // 6. 游客账号禁止登录管理端
+        boolean onlyGuest = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .allMatch(auth -> "ROLE_GUEST".equals(auth));
+        if (onlyGuest) {
+            throw new BadCredentialsException("游客账号无管理端登录权限");
+        }
+
+        // 7. 构建已认证的用户 Token
         AdminPasswordCodeAuthenticationToken authenticatedToken = new AdminPasswordCodeAuthenticationToken(
                 user, code, user.getAuthorities());
 
-        // 6. 生成 Access Token
+        // 8. 生成 Access Token
         Set<String> authorizedScopes = registeredClient.getScopes();
         DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()
                 .registeredClient(registeredClient)
@@ -107,9 +130,9 @@ public class AdminPasswordCodeAuthenticationProvider implements AuthenticationPr
                 generatedAccessToken.getExpiresAt(),
                 authorizedScopes);
 
-        // 7. 构建 Authorization 记录
+        // 9. 构建 Authorization 记录
         OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
-                .principalName(username)
+                .principalName(user.getUsername())
                 .authorizationGrantType(new AuthorizationGrantType("admin_password_code"))
                 .authorizedScopes(authorizedScopes)
                 .attribute(Principal.class.getName(), authenticatedToken)
@@ -120,7 +143,7 @@ public class AdminPasswordCodeAuthenticationProvider implements AuthenticationPr
                     metadata.put(OAuth2Authorization.Token.INVALIDATED_METADATA_NAME, false);
                 });
 
-        // 8. 生成 Refresh Token
+        // 10. 生成 Refresh Token
         OAuth2RefreshToken refreshToken = null;
         if (registeredClient.getAuthorizationGrantTypes().contains(AuthorizationGrantType.REFRESH_TOKEN)) {
             OAuth2TokenContext refreshTokenContext = tokenContextBuilder
@@ -133,13 +156,33 @@ public class AdminPasswordCodeAuthenticationProvider implements AuthenticationPr
             }
         }
 
-        // 9. 保存授权记录
+        // 11. 登录互踢：同一账号在管理端只能保留一个有效授权
+        removeOtherAuthorizations(user.getUsername(), registeredClient.getClientId());
+
+        // 12. 保存授权记录
         OAuth2Authorization authorization = authorizationBuilder.build();
         authorizationService.save(authorization);
 
-        // 10. 返回标准的 OAuth2AccessTokenAuthenticationToken
+        // 13. 返回标准的 OAuth2AccessTokenAuthenticationToken
         return new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal,
                 accessToken, refreshToken, Collections.emptyMap());
+    }
+
+    /**
+     * 登录互踢：删除同一用户在同一客户端下的其他授权记录
+     */
+    private void removeOtherAuthorizations(String principalName, String clientId) {
+        try {
+            QueryWrapper<com.xuan.entity.OAuth2Authorization> wrapper = new QueryWrapper<>();
+            wrapper.eq("principal_name", principalName)
+                    .eq("registered_client_id", clientId);
+            int deleted = authorizationMapper.delete(wrapper);
+            if (deleted > 0) {
+                log.info("管理端登录互踢: principalName={}, clientId={}, 删除旧授权 {} 条", principalName, clientId, deleted);
+            }
+        } catch (Exception e) {
+            log.error("管理端登录互踢失败: principalName={}, clientId={}", principalName, clientId, e);
+        }
     }
 
     /**

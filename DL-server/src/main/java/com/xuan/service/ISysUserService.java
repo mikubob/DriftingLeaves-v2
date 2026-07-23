@@ -1,6 +1,10 @@
 package com.xuan.service;
 
+import com.xuan.dto.ProfileAuditDTO;
 import com.xuan.dto.UpdateMeDTO;
+import com.xuan.vo.ProfileAuditVO;
+
+import java.util.List;
 
 /**
  * 系统用户服务接口
@@ -29,4 +33,45 @@ public interface ISysUserService {
      * @param dto    修改参数(字段全部可选)
      */
     void updateMe(Long userId, UpdateMeDTO dto);
+
+    /**
+     * 申请修改昵称
+     * <p>
+     * 提交后进入待审核状态，需管理员审核通过后才更新 sys_user.nickname。
+     * 同一账号 / 同一 IP 15 天内只能申请一次。
+     * </p>
+     *
+     * @param userId   当前登录用户 ID
+     * @param nickname 新昵称
+     * @param clientIp 申请 IP
+     */
+    void applyNicknameChange(Long userId, String nickname, String clientIp);
+
+    /**
+     * 申请修改头像
+     * <p>
+     * 提交后进入待审核状态，需管理员审核通过后才更新 sys_user.avatar。
+     * 同一账号 / 同一 IP 30 天内只能申请一次。
+     * </p>
+     *
+     * @param userId   当前登录用户 ID
+     * @param avatar   新头像 URL
+     * @param clientIp 申请 IP
+     */
+    void applyAvatarChange(Long userId, String avatar, String clientIp);
+
+    /**
+     * 管理员审核用户昵称/头像修改申请
+     *
+     * @param dto        审核参数
+     * @param auditorId  当前管理员用户 ID
+     */
+    void auditProfileChange(ProfileAuditDTO dto, Long auditorId);
+
+    /**
+     * 查询所有待审核的用户资料修改申请
+     *
+     * @return 待审核记录列表，包含申请人当前信息
+     */
+    List<ProfileAuditVO> listPendingProfileAudits();
 }

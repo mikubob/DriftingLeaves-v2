@@ -84,4 +84,7 @@ public class BlogArticleDetailVO implements Serializable {
 
     // 相关文章推荐
     private List<BlogArticleVO> relatedArticles;
+
+    // 是否需要登录才能查看完整内容
+    private Boolean needLogin;
 }

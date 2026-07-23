@@ -47,6 +47,12 @@ public class MessageVO implements Serializable {
     // 留言用户ID
     private Long userId;
 
+    // 留言用户昵称
+    private String nickname;
+
+    // 留言用户头像
+    private String avatar;
+
     // 地区
     private String location;
 

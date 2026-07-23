@@ -50,6 +50,12 @@ public class ArticleCommentVO implements Serializable {
     // 评论用户ID
     private Long userId;
 
+    // 评论用户昵称
+    private String nickname;
+
+    // 评论用户头像
+    private String avatar;
+
     // 地区
     private String location;
 

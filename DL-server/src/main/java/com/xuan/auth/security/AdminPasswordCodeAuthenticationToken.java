@@ -7,17 +7,21 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
 /**
- * 管理员用户名/密码/验证码认证 Token
+ * 管理员邮箱/密码/验证码认证 Token
+ * <p>
+ * 未认证状态：principal = email，credentials = password，code = 邮箱验证码
+ * 已认证状态：principal = {@link SecurityUser}，credentials = null
+ * </p>
  */
 public class AdminPasswordCodeAuthenticationToken extends AbstractAuthenticationToken {
 
-    private final Object principal;   // 未认证时存 username，认证后存 UserDetails
+    private final Object principal;   // 未认证时存 email，认证后存 UserDetails
     private final Object credentials; // 未认证时存 password
     private final String code;        // 邮箱验证码
 
-    public AdminPasswordCodeAuthenticationToken(String username, String password, String code) {
+    public AdminPasswordCodeAuthenticationToken(String email, String password, String code) {
         super(null);
-        this.principal = username;
+        this.principal = email;
         this.credentials = password;
         this.code = code;
         setAuthenticated(false);

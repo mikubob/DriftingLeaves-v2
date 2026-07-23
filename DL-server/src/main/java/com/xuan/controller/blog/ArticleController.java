@@ -11,7 +11,10 @@ import com.xuan.vo.BlogArticleVO;
 import com.xuan.vo.HotArticleVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,6 +56,22 @@ public class ArticleController {
         BlogArticleDetailVO articleDetail = articleService.getBySlug(slug);
         articleService.incrementViewCount(articleDetail.getId());
         mergeRedisCount(articleDetail);
+
+        // 未登录用户仅展示约 30% 内容
+        if (!isAuthenticated()) {
+            articleDetail.setNeedLogin(true);
+            if (articleDetail.getContentMarkdown() != null) {
+                articleDetail.setContentMarkdown(truncateContent(articleDetail.getContentMarkdown()));
+                articleDetail.setContentHtml(null);
+            } else if (articleDetail.getContentHtml() != null) {
+                // 仅 HTML 内容时，先提取纯文本再截断，用 Markdown 字段返回给前端渲染
+                String plainText = Jsoup.parse(articleDetail.getContentHtml()).text();
+                articleDetail.setContentMarkdown(truncateContent(plainText));
+                articleDetail.setContentHtml(null);
+            }
+        } else {
+            articleDetail.setNeedLogin(false);
+        }
         return Result.success(articleDetail);
     }
 
@@ -177,5 +196,29 @@ public class ArticleController {
 
     private long safeLong(Long value) {
         return value == null ? 0L : value;
+    }
+
+    /**
+     * 判断当前请求是否已认证（携带有效 JWT）
+     */
+    private boolean isAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal());
+    }
+
+    /**
+     * 截断文章内容：保留约 30% 的字符数，用于未登录用户预览
+     */
+    private String truncateContent(String content) {
+        if (content == null || content.length() <= 100) {
+            return content;
+        }
+        int limit = (int) (content.length() * 0.3);
+        if (limit >= content.length()) {
+            return content;
+        }
+        return content.substring(0, limit) + "\n\n...";
     }
 }

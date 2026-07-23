@@ -64,9 +64,12 @@ public class JwtCustomizerConfig {
                 // context.getPrincipal() 返回的是 Authentication 对象（AdminPasswordCodeAuthenticationToken）
                 Authentication authentication = context.getPrincipal();
 
-                // 提取角色权限集合（如 ["ROLE_ADMIN", "ROLE_AUTHOR", "ROLE_GUEST"]）
+                // 提取角色权限集合并去除 ROLE_ 前缀
+                // Resource Server 的 JwtAuthenticationConverter 会统一添加 ROLE_ 前缀
+                // 若此处保留前缀，会导致解析后变成 ROLE_ROLE_GUEST，所有 hasRole 校验失败
                 Set<String> roles = authentication.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
+                        .map(auth -> auth.startsWith("ROLE_") ? auth.substring(5) : auth)
                         .collect(Collectors.toSet());
                 // 写入 roles claim，供 Resource Server 的 JwtAuthenticationConverter 解析为 GrantedAuthority
                 context.getClaims().claim("roles", roles);

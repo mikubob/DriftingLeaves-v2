@@ -9,10 +9,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * 自定义 grant_type=email_code 请求转换器
+ * 自定义 grant_type=email_code 请求转换器（博客端）
  * <p>
- * 从 {@code POST /oauth2/token} 请求中提取 email 与 code 参数，
- * 构造 {@link EmailCodeAuthenticationToken} 交给 {@link EmailCodeAuthenticationProvider} 认证。
+ * 支持两种登录方式：
+ * <ol>
+ *     <li>邮箱 + 密码登录：email + password</li>
+ *     <li>邮箱 + 验证码登录：email + code</li>
+ * </ol>
+ * 二者至少提供一种完整凭证，password 优先。
  * </p>
  */
 @Component
@@ -26,12 +30,17 @@ public class EmailCodeAuthenticationConverter implements AuthenticationConverter
         }
 
         String email = request.getParameter("email");
-        String code = request.getParameter("code");
-
-        if (!StringUtils.hasText(email) || !StringUtils.hasText(code)) {
-            throw new OAuth2AuthenticationException("邮箱和验证码不能为空");
+        if (!StringUtils.hasText(email)) {
+            throw new OAuth2AuthenticationException("邮箱不能为空");
         }
 
-        return new EmailCodeAuthenticationToken(email, code);
+        String password = request.getParameter(OAuth2ParameterNames.PASSWORD);
+        String code = request.getParameter("code");
+
+        if (!StringUtils.hasText(password) && !StringUtils.hasText(code)) {
+            throw new OAuth2AuthenticationException("密码和验证码至少填写一项");
+        }
+
+        return new EmailCodeAuthenticationToken(email, password, code);
     }
 }

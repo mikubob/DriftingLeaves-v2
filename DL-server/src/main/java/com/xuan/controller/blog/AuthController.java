@@ -1,13 +1,20 @@
 package com.xuan.controller.blog;
 
 import com.xuan.annotation.RateLimit;
+import com.xuan.dto.ApplyNicknameDTO;
 import com.xuan.dto.RegisterDTO;
 import com.xuan.dto.SendEmailCodeDTO;
 import com.xuan.entity.SysUser;
+import com.xuan.entity.SysUserProfileAudit;
 import com.xuan.mapper.SysUserMapper;
+import com.xuan.mapper.SysUserProfileAuditMapper;
 import com.xuan.result.Result;
 import com.xuan.service.BlogUserService;
+import com.xuan.service.CommonService;
+import com.xuan.service.ISysUserService;
+import com.xuan.utils.IpUtil;
 import com.xuan.vo.CurrentUserVO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +26,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -50,7 +58,13 @@ import java.util.List;
 public class AuthController {
 
     private final BlogUserService blogUserService;
+    private final ISysUserService sysUserService;
+    private final CommonService commonService;
     private final SysUserMapper sysUserMapper;
+    private final SysUserProfileAuditMapper auditMapper;
+
+    private static final int AUDIT_TYPE_NICKNAME = 1;
+    private static final int AUDIT_TYPE_AVATAR = 2;
 
     /**
      * 发送邮箱验证码
@@ -119,6 +133,9 @@ public class AuthController {
                 .map(r -> r.startsWith("ROLE_") ? r.substring(5) : r)
                 .toList();
 
+        SysUserProfileAudit pendingNickname = auditMapper.selectPendingByUserAndType(userId, AUDIT_TYPE_NICKNAME);
+        SysUserProfileAudit pendingAvatar = auditMapper.selectPendingByUserAndType(userId, AUDIT_TYPE_AVATAR);
+
         CurrentUserVO vo = CurrentUserVO.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -126,8 +143,42 @@ public class AuthController {
                 .email(user.getEmail())
                 .avatar(user.getAvatar())
                 .roles(roles)
+                .pendingNickname(pendingNickname != null ? pendingNickname.getNewValue() : null)
+                .pendingAvatar(pendingAvatar != null ? pendingAvatar.getNewValue() : null)
                 .build();
 
         return Result.success(vo);
+    }
+
+    /**
+     * 申请修改昵称
+     */
+    @PostMapping("/me/nickname")
+    @PreAuthorize("hasRole('GUEST')")
+    public Result<String> applyNickname(@AuthenticationPrincipal Jwt jwt,
+                                        @Valid @RequestBody ApplyNicknameDTO dto,
+                                        HttpServletRequest request) {
+        Long userId = jwt.getClaim("user_id");
+        String clientIp = IpUtil.getClientIp(request);
+        sysUserService.applyNicknameChange(userId, dto.getNickname(), clientIp);
+        return Result.success("昵称修改申请已提交，审核通过前仍显示旧昵称");
+    }
+
+    /**
+     * 申请修改头像
+     */
+    @PostMapping("/me/avatar")
+    @PreAuthorize("hasRole('GUEST')")
+    public Result<String> applyAvatar(@AuthenticationPrincipal Jwt jwt,
+                                      MultipartFile file,
+                                      HttpServletRequest request) {
+        Long userId = jwt.getClaim("user_id");
+        if (file == null || file.isEmpty()) {
+            return Result.error("请上传头像文件");
+        }
+        String avatarUrl = commonService.uploadFile(file);
+        String clientIp = IpUtil.getClientIp(request);
+        sysUserService.applyAvatarChange(userId, avatarUrl, clientIp);
+        return Result.success("头像修改申请已提交，审核通过前仍显示旧头像");
     }
 }

@@ -6,6 +6,8 @@ import com.xuan.entity.SysUserRole;
 import com.xuan.exception.BaseException;
 import com.xuan.mapper.SysUserMapper;
 import com.xuan.mapper.SysUserRoleMapper;
+import com.xuan.util.RoleNicknameMapper;
+import com.xuan.util.UsernameGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
@@ -105,6 +107,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final SysUserMapper sysUserMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final UsernameGenerator usernameGenerator;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -125,12 +128,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String email = (String) attributes.get("email");
         String avatarUrl = (String) attributes.get("avatar_url");
 
-        // 昵称优先级：name > login > provider_oauthId
-        String nickname = StringUtils.hasText(name) ? name
-                : (StringUtils.hasText(login) ? login : provider + "_" + oauthId);
-
         // 4. 查找或创建本地 sys_user
-        SysUser localUser = findOrCreateLocalUser(provider, oauthId, email, nickname, avatarUrl);
+        SysUser localUser = findOrCreateLocalUser(provider, oauthId, email, avatarUrl);
 
         // 5. 加载用户角色
         List<String> roleCodes = sysUserRoleMapper.selectRoleCodesByUserId(localUser.getId());
@@ -157,7 +156,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
      * </p>
      */
     private SysUser findOrCreateLocalUser(String provider, String oauthId,
-                                          String email, String nickname, String avatarUrl) {
+                                          String email, String avatarUrl) {
         // 1. 按 (oauth_provider, oauth_id) 查找
         SysUser existing = sysUserMapper.selectByOAuth(provider, oauthId);
         if (existing != null) {
@@ -187,21 +186,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
 
         // 3. 自动创建新 sys_user
-        return createNewOAuthUser(provider, oauthId, email, nickname, avatarUrl);
+        return createNewOAuthUser(provider, oauthId, email, avatarUrl);
     }
 
     /**
      * 创建新的第三方登录用户
      */
     private SysUser createNewOAuthUser(String provider, String oauthId,
-                                       String email, String nickname, String avatarUrl) {
-        // username 必须唯一：使用 provider_oauthId 格式
-        String username = provider + "_" + oauthId;
-
-        // 兜底：若 username 已存在（极端情况），追加随机后缀
-        if (sysUserMapper.selectByUsername(username) != null) {
-            username = username + "_" + UUID.randomUUID().toString().substring(0, 8);
-        }
+                                       String email, String avatarUrl) {
+        // username 由后端统一随机生成，不再暴露第三方平台信息
+        String username = usernameGenerator.generate();
 
         // password 占位：第三方登录不使用密码，但字段不能为空
         String randomPassword = UUID.randomUUID().toString();
@@ -210,7 +204,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         SysUser sysUser = SysUser.builder()
                 .username(username)
                 .password(encodedPassword)
-                .nickname(nickname)
+                .nickname(RoleNicknameMapper.getNickname(List.of("GUEST")))
                 .email(email)
                 .avatar(avatarUrl)
                 .userType(1)

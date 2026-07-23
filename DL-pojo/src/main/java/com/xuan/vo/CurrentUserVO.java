@@ -63,4 +63,14 @@ public class CurrentUserVO implements Serializable {
      * 角色列表(不带 ROLE_ 前缀)
      */
     private List<String> roles;
+
+    /**
+     * 待审核昵称（null 表示无待审）
+     */
+    private String pendingNickname;
+
+    /**
+     * 待审核头像（null 表示无待审）
+     */
+    private String pendingAvatar;
 }

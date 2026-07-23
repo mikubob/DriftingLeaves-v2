@@ -15,8 +15,8 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import com.xuan.auth.security.OAuth2LoginSuccessHandler;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -207,6 +207,10 @@ public class OAuth2LoginConfig {
      * <p>
      * 注意：Gitee 不支持 client_secret_basic（Basic Auth），需用 client_secret_post
      * </p>
+     * <p>
+     * Gitee 支持的 scope 参考：https://gitee.com/api/v5/oauth_doc
+     * 仅申请 user_info 即可获取用户公开信息（含 email）。
+     * </p>
      */
     private ClientRegistration buildGiteeRegistration(String clientId, String clientSecret) {
         return ClientRegistration.withRegistrationId("gitee")
@@ -215,7 +219,7 @@ public class OAuth2LoginConfig {
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
-                .scope("user_info", "emails")
+                .scope("user_info")
                 .authorizationUri(GITEE_AUTHORIZATION_URI)
                 .tokenUri(GITEE_TOKEN_URI)
                 .userInfoUri(GITEE_USER_INFO_URI)
@@ -236,9 +240,7 @@ public class OAuth2LoginConfig {
     public SecurityFilterChain oauth2LoginSecurityFilterChain(HttpSecurity http,
                                                                ClientRegistrationRepository clientRegistrationRepository,
                                                                CustomOAuth2UserService customOAuth2UserService,
-                                                               OAuth2TokenGenerator<?> tokenGenerator,
-                                                               OAuth2AuthorizationService authorizationService,
-                                                               RegisteredClientRepository registeredClientRepository) throws Exception {
+                                                               OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) throws Exception {
         http
                 // 仅匹配 OAuth2 登录路径
                 .securityMatcher(
@@ -259,10 +261,9 @@ public class OAuth2LoginConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        // P1-2 改造:传入 tokenGenerator + authorizationService + registeredClientRepository
-                        // 用于生成 access_token + refresh_token 并持久化授权记录
-                        .successHandler(new OAuth2LoginSuccessHandler(
-                                tokenGenerator, authorizationService, registeredClientRepository))
+                        // P1-2 改造:使用 Spring 容器管理的 OAuth2LoginSuccessHandler,
+                        // 使其 @Value / @PostConstruct 等注解生效
+                        .successHandler(oAuth2LoginSuccessHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xuan.mapper.SysUserProfileAuditMapper">
+
+    <select id="selectPendingByUserAndType" resultType="com.xuan.entity.SysUserProfileAudit">
+        SELECT *
+        FROM sys_user_profile_audit
+        WHERE user_id = #{userId}
+          AND audit_type = #{auditType}
+          AND status = 0
+        ORDER BY apply_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestApprovedByUser" resultType="com.xuan.entity.SysUserProfileAudit">
+        SELECT *
+        FROM sys_user_profile_audit
+        WHERE user_id = #{userId}
+          AND audit_type = #{auditType}
+          AND status = 1
+        ORDER BY audit_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestApprovedByIp" resultType="com.xuan.entity.SysUserProfileAudit">
+        SELECT *
+        FROM sys_user_profile_audit
+        WHERE apply_ip = #{applyIp}
+          AND audit_type = #{auditType}
+          AND status = 1
+        ORDER BY audit_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectPendingList" resultType="com.xuan.entity.SysUserProfileAudit">
+        SELECT *
+        FROM sys_user_profile_audit
+        WHERE status = 0
+        ORDER BY apply_time DESC
+    </select>
+
+</mapper>

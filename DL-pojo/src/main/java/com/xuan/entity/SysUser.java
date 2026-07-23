@@ -65,4 +65,13 @@ public class SysUser extends BaseEntity {
 
     // 最后登录IP
     private String lastLoginIp;
+
+    // 昵称最后修改时间（半个月内只能修改一次）
+    private LocalDateTime nicknameModifyTime;
+
+    // 头像最后修改时间（一个月内只能修改一次）
+    private LocalDateTime avatarModifyTime;
+
+    // 头像最后修改IP（与账号共同判定头像锁定）
+    private String lastAvatarModifyIp;
 }

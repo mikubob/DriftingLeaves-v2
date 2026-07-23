@@ -15,7 +15,7 @@ import java.io.Serializable;
 /**
  * 博客端用户注册 DTO
  * <p>
- * 用户名 + 邮箱 + 邮箱验证码三要素注册，昵称可选。
+ * 邮箱 + 邮箱验证码注册，用户名与昵称均由后端统一生成。
  * </p>
  */
 @Data
@@ -27,10 +27,8 @@ public class RegisterDTO implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    // 用户名（登录账号）
-    @NotBlank(message = "用户名不能为空")
-    @Size(min = 3, max = 20, message = "用户名长度必须在 3-20 字符之间")
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "用户名只能包含字母、数字和下划线")
+    // 用户名（兼容旧前端，后端直接忽略，统一随机生成）
+    @Size(max = 64, message = "用户名长度不能超过 64 字符")
     private String username;
 
     // 邮箱
@@ -43,7 +41,7 @@ public class RegisterDTO implements Serializable {
     @Pattern(regexp = "^\\d{6}$", message = "验证码必须是 6 位数字")
     private String code;
 
-    // 昵称（可选，为空时默认 "游客_xxxx"）
-    @Size(max = 15, message = "昵称不能超过 15 字")
+    // 昵称（兼容旧前端，后端直接忽略，按角色默认填充）
+    @Size(max = 64, message = "昵称长度不能超过 64 字符")
     private String nickname;
 }
