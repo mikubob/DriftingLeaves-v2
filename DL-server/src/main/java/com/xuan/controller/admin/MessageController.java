@@ -64,6 +64,7 @@ public class MessageController {
      * @return
      */
     @DeleteMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @OperationLog(value = OperationType.DELETE, target = "message", targetId = "#ids")
     public Result<String> batchDelete(@RequestParam List<Long> ids) {
         log.info("批量删除留言: {}", ids);
