@@ -33,4 +33,5 @@ public class MessageConstant {
     public static final String EMAIL_VERIFY_CODE_LOCKED = "验证码尝试次数过多，已被锁定，请稍后重试";
     public static final String EMAIL_VERIFY_CODE_COOLDOWN = "验证码发送过于频繁，请稍后重试";
     public static final String GUEST_ROLE_NOT_FOUND = "系统角色 GUEST 未初始化，请联系管理员";
+    public static final String EMAIL_NOT_REGISTERED = "该邮箱未注册，请先注册";
 }

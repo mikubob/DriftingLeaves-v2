@@ -1,5 +1,6 @@
 package com.xuan.service;
 
+import com.xuan.dto.ChangePasswordDTO;
 import com.xuan.dto.ProfileAuditDTO;
 import com.xuan.dto.UpdateMeDTO;
 import com.xuan.dto.UserCreateDTO;
@@ -38,6 +39,17 @@ public interface ISysUserService {
  * @param dto    修改参数(字段全部可选)
  */
 void updateMe(Long userId, UpdateMeDTO dto);
+
+/**
+ * 修改密码
+ * <p>
+ * 校验 15 天冷却、旧密码正确、新密码不能与旧密码相同、新密码与确认密码一致后更新密码。
+ * </p>
+ *
+ * @param userId 当前登录用户 ID
+ * @param dto    密码修改参数
+ */
+void changePassword(Long userId, ChangePasswordDTO dto);
 
 /**
  * 申请修改用户名

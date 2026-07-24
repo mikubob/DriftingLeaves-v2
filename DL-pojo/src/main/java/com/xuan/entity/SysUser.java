@@ -71,4 +71,7 @@ public class SysUser extends BaseEntity {
 
     // 头像最后修改IP（与账号共同判定头像锁定）
     private String lastAvatarModifyIp;
+
+    // 密码最后修改时间（15天冷却）
+    private LocalDateTime passwordModifyTime;
 }

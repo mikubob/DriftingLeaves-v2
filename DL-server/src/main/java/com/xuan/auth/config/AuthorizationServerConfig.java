@@ -173,7 +173,7 @@ public class AuthorizationServerConfig {
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
-                .issuer("http://localhost:5922")
+                .issuer("https://api.driftingleaves.xyz")
                 .build();
     }
 }

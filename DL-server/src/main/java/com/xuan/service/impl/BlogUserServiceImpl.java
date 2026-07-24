@@ -22,8 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.UUID;
-
 /**
  * 博客端用户服务实现（注册 + 发送验证码）
  */
@@ -84,7 +82,7 @@ public class BlogUserServiceImpl implements BlogUserService {
     /**
      * 用户注册
      * <p>
-     * 流程：唯一性校验 → 验证码校验 → 创建 sys_user → 关联 GUEST 角色
+     * 流程：唯一性校验 → 密码一致性校验 → 验证码校验 → 创建 sys_user → 关联 GUEST 角色
      * </p>
      */
     @Override
@@ -92,20 +90,27 @@ public class BlogUserServiceImpl implements BlogUserService {
     public void register(RegisterDTO registerDTO) {
         String email = registerDTO.getEmail();
         String code = registerDTO.getCode();
+        String password = registerDTO.getPassword();
+        String confirmPassword = registerDTO.getConfirmPassword();
 
         // 1. 邮箱唯一性校验
         if (sysUserMapper.selectByEmail(email) != null) {
             throw new BaseException(MessageConstant.EMAIL_EXISTS);
         }
 
-        // 2. 锁定检查
+        // 2. 密码一致性校验
+        if (!password.equals(confirmPassword)) {
+            throw new BaseException("两次输入的密码不一致");
+        }
+
+        // 3. 锁定检查
         if (emailCodeService.isLocked(email)) {
             Long minutes = emailCodeService.getLockRemainingMinutes(email);
             throw new VerifyCodeLockException(
                     MessageConstant.EMAIL_VERIFY_CODE_LOCKED + minutes + " 分钟");
         }
 
-        // 3. 验证码校验
+        // 4. 验证码校验
         //    开发模式：配置了 dl.security.dev-code 时直接通过，便于联调
         boolean codeOk = StringUtils.hasText(devCode) && devCode.equals(code.trim())
                 || emailCodeService.verifyCode(email, code);
@@ -113,14 +118,13 @@ public class BlogUserServiceImpl implements BlogUserService {
             throw new VerifyCodeErrorException(MessageConstant.EMAIL_VERIFY_CODE_ERROR);
         }
 
-        // 4. 后端生成随机用户名（不再使用前端传入的 username）
+        // 5. 后端生成随机用户名（不再使用前端传入的 username）
         String username = usernameGenerator.generate();
 
-        // 5. 创建 sys_user
+        // 6. 创建 sys_user
         //    user_type=1（博客用户），status=1（启用），login_type=1（本地）
-        //    password 设置为随机 UUID 的 BCrypt 哈希（占位，邮箱验证码登录不会用到密码字段）
-        String randomPassword = UUID.randomUUID().toString();
-        String encodedPassword = passwordEncoder.encode(randomPassword);
+        //    password 使用用户输入的密码进行 BCrypt 加密
+        String encodedPassword = passwordEncoder.encode(password);
 
         SysUser sysUser = SysUser.builder()
                 .username(username)
@@ -133,7 +137,7 @@ public class BlogUserServiceImpl implements BlogUserService {
 
         sysUserMapper.insert(sysUser);
 
-        // 6. 关联 GUEST 角色
+        // 7. 关联 GUEST 角色
         Long guestRoleId = sysUserRoleMapper.selectRoleIdByCode("GUEST");
         if (guestRoleId == null) {
             // 极端情况：sys_role 表未初始化 GUEST 角色，回滚事务

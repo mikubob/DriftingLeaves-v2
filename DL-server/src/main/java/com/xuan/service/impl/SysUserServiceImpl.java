@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xuan.constant.MessageConstant;
 import com.xuan.constant.StatusConstant;
+import com.xuan.dto.ChangePasswordDTO;
 import com.xuan.dto.ProfileAuditDTO;
 import com.xuan.dto.UpdateMeDTO;
 import com.xuan.dto.UserCreateDTO;
@@ -72,6 +73,7 @@ public class SysUserServiceImpl implements ISysUserService {
     // 冷却期（天）
     private static final int USERNAME_COOLDOWN_DAYS = 15;
     private static final int AVATAR_COOLDOWN_DAYS = 30;
+    private static final int PASSWORD_COOLDOWN_DAYS = 15;
 
     // 不允许通过管理端分配的角色
     private static final Set<String> NON_ASSIGNABLE_ROLES = Set.of("ADMIN");
@@ -105,21 +107,14 @@ public class SysUserServiceImpl implements ISysUserService {
         //    必须同时提供 oldPassword 和 newPassword,否则忽略密码修改
         boolean hasOld = StringUtils.hasText(dto.getOldPassword());
         boolean hasNew = StringUtils.hasText(dto.getNewPassword());
+        boolean passwordChanged = false;
         if (hasOld || hasNew) {
             if (!hasOld || !hasNew) {
                 throw new BaseException("修改密码时必须同时提供旧密码和新密码");
             }
-            // 校验旧密码(DelegatingPasswordEncoder 会自动识别 {bcrypt} 前缀)
-            if (!passwordEncoder.matches(dto.getOldPassword(), user.getPassword())) {
-                throw new PasswordErrorException(MessageConstant.OLD_PASSWORD_ERROR);
-            }
-            // 新密码不能与旧密码相同
-            if (passwordEncoder.matches(dto.getNewPassword(), user.getPassword())) {
-                throw new BaseException(MessageConstant.NEW_PASSWORD_NOT_CHANGE);
-            }
-            // 加密新密码(DelegatingPasswordEncoder 会自动加 {bcrypt} 前缀)
-            user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+            updatePassword(user, dto.getOldPassword(), dto.getNewPassword());
             changed = true;
+            passwordChanged = true;
         }
 
         if (!changed) {
@@ -131,7 +126,54 @@ public class SysUserServiceImpl implements ISysUserService {
         log.info("用户资料更新成功: userId={}, changedFields(email={},password={})",
                 userId,
                 StringUtils.hasText(dto.getEmail()),
-                hasOld && hasNew);
+                passwordChanged);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, ChangePasswordDTO dto) {
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BaseException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+
+        // 新密码与确认密码一致性校验
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new BaseException("两次输入的新密码不一致");
+        }
+
+        updatePassword(user, dto.getOldPassword(), dto.getNewPassword());
+        sysUserMapper.updateById(user);
+        log.info("用户密码修改成功: userId={}", userId);
+    }
+
+    /**
+     * 统一密码更新逻辑（含 15 天冷却、旧密码校验、新旧密码差异校验）
+     */
+    private void updatePassword(SysUser user, String oldPassword, String newPassword) {
+        // 1. 冷却期校验
+        LocalDateTime lastModifyTime = user.getPasswordModifyTime();
+        if (lastModifyTime != null) {
+            long days = ChronoUnit.DAYS.between(lastModifyTime, LocalDateTime.now());
+            if (days < PASSWORD_COOLDOWN_DAYS) {
+                throw new BaseException(String.format("同一账号 %d 天内只能修改一次密码，请 %d 天后再试",
+                        PASSWORD_COOLDOWN_DAYS, PASSWORD_COOLDOWN_DAYS - days));
+            }
+        }
+
+        // 2. 校验旧密码
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new PasswordErrorException(MessageConstant.OLD_PASSWORD_ERROR);
+        }
+
+        // 3. 新密码不能与旧密码相同
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BaseException(MessageConstant.NEW_PASSWORD_NOT_CHANGE);
+        }
+
+        // 4. 加密并更新密码及修改时间
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordModifyTime(LocalDateTime.now());
     }
 
     @Override

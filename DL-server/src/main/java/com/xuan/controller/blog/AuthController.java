@@ -2,6 +2,7 @@ package com.xuan.controller.blog;
 
 import com.xuan.annotation.RateLimit;
 import com.xuan.dto.ApplyUsernameDTO;
+import com.xuan.dto.ChangePasswordDTO;
 import com.xuan.dto.RegisterDTO;
 import com.xuan.dto.SendEmailCodeDTO;
 import com.xuan.entity.SysUser;
@@ -42,6 +43,7 @@ import java.util.List;
  *     <li>{@code POST /blog/auth/sendCode}:发送邮箱验证码(permitAll)</li>
  *     <li>{@code POST /blog/auth/register}:用户注册(permitAll)</li>
  *     <li>{@code GET  /blog/auth/me}:获取当前登录用户信息(hasRole('GUEST'))</li>
+ *     <li>{@code POST /blog/auth/me/password}:修改当前登录用户密码(hasRole('GUEST'))</li>
  * </ul>
  *
  * <h3>/blog/auth/me 权限特例</h3>
@@ -144,9 +146,25 @@ public class AuthController {
                 .roles(roles)
                 .pendingUsername(pendingUsername != null ? pendingUsername.getNewValue() : null)
                 .pendingAvatar(pendingAvatar != null ? pendingAvatar.getNewValue() : null)
+                .passwordModifyTime(user.getPasswordModifyTime())
                 .build();
 
         return Result.success(vo);
+    }
+
+    /**
+     * 修改当前登录用户密码
+     * <p>
+     * 15 天内只能修改一次，需校验旧密码。
+     * </p>
+     */
+    @PostMapping("/me/password")
+    @PreAuthorize("hasRole('GUEST')")
+    public Result<String> changePassword(@AuthenticationPrincipal Jwt jwt,
+                                         @Valid @RequestBody ChangePasswordDTO dto) {
+        Long userId = jwt.getClaim("user_id");
+        sysUserService.changePassword(userId, dto);
+        return Result.success("密码修改成功");
     }
 
     /**

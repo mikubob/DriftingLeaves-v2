@@ -78,7 +78,12 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("*")  // 允许所有源，或指定域名
+                .allowedOriginPatterns(
+                        "https://driftingleaves.xyz",
+                        "https://admin.driftingleaves.xyz",
+                        "https://blog.driftingleaves.xyz",
+                        "https://cv.driftingleaves.xyz"
+                )  // 生产环境指定具体源
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")  // 允许的HTTP方法
                 .allowedHeaders("*")
                 .allowCredentials(true)  // Cookie 模式必需：允许浏览器跨域携带 Cookie

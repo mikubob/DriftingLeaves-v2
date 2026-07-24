@@ -68,4 +68,9 @@ public class CurrentUserVO implements Serializable {
      * 待审核头像（null 表示无待审）
      */
     private String pendingAvatar;
+
+    /**
+     * 密码最后修改时间（null 表示未修改过）
+     */
+    private java.time.LocalDateTime passwordModifyTime;
 }

@@ -15,7 +15,7 @@ import java.io.Serializable;
 /**
  * 博客端用户注册 DTO
  * <p>
- * 邮箱 + 邮箱验证码注册，用户名由后端统一随机生成。
+ * 邮箱 + 邮箱验证码 + 密码 + 确认密码注册，用户名由后端统一随机生成。
  * </p>
  */
 @Data
@@ -40,4 +40,13 @@ public class RegisterDTO implements Serializable {
     @NotBlank(message = "验证码不能为空")
     @Pattern(regexp = "^\\d{6}$", message = "验证码必须是 6 位数字")
     private String code;
+
+    // 密码
+    @NotBlank(message = "密码不能为空")
+    @Size(min = 6, max = 32, message = "密码长度应在 6-32 个字符之间")
+    private String password;
+
+    // 确认密码（仅用于前端校验，后端校验一致性）
+    @NotBlank(message = "确认密码不能为空")
+    private String confirmPassword;
 }
