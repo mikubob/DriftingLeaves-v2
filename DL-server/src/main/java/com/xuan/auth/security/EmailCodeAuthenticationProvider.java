@@ -6,7 +6,6 @@ import com.xuan.mapper.OAuth2AuthorizationMapper;
 import com.xuan.mapper.SysUserMapper;
 import com.xuan.mapper.SysUserRoleMapper;
 import com.xuan.service.EmailCodeService;
-import com.xuan.util.RoleNicknameMapper;
 import com.xuan.util.UsernameGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +60,6 @@ import java.util.UUID;
  * <ul>
  *     <li>用户名由后端统一随机生成</li>
  *     <li>密码为随机 UUID 加密值（验证码登录不使用密码，但字段非空）</li>
- *     <li>昵称按 GUEST 角色默认填充</li>
  *     <li>userType=1（博客用户），status=1（启用），loginType=1（本地）</li>
  *     <li>关联 GUEST 角色（博客端默认角色）</li>
  * </ul>
@@ -252,7 +250,6 @@ public class EmailCodeAuthenticationProvider implements AuthenticationProvider {
      * <ul>
      *     <li>username = 后端随机生成(user_ + 时间戳后6位 + UUID前8位)</li>
      *     <li>password = BCrypt(随机 UUID)(邮箱验证码登录不使用密码,但字段非空)</li>
-     *     <li>nickname = 按角色默认填充(如 GUEST → "游客")</li>
      *     <li>email = 用户邮箱</li>
      *     <li>userType = 1(博客用户)</li>
      *     <li>status = 1(启用)</li>
@@ -282,7 +279,6 @@ public class EmailCodeAuthenticationProvider implements AuthenticationProvider {
         SysUser sysUser = SysUser.builder()
                 .username(username)
                 .password(encodedPassword)
-                .nickname(RoleNicknameMapper.getNickname(List.of("GUEST")))
                 .email(email)
                 .userType(1)   // 博客用户
                 .status(1)     // 启用

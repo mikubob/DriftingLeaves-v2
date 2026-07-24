@@ -1,9 +1,13 @@
 package com.xuan.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xuan.entity.SysUser;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
 
 @Mapper
 public interface SysUserMapper extends BaseMapper<SysUser> {
@@ -32,4 +36,21 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
      */
     SysUser selectByOAuth(@Param("oauthProvider") String oauthProvider,
                           @Param("oauthId") String oauthId);
+
+    /**
+     * 管理端分页查询用户列表
+     * <p>
+     * 返回 Map 便于在 Service 层将角色聚合字符串转换为 List。
+     * </p>
+     *
+     * @param page    分页对象
+     * @param keyword 用户名/邮箱关键字
+     * @param status  用户状态
+     * @param role    角色编码过滤
+     * @return 分页结果
+     */
+    IPage<Map<String, Object>> selectUserPage(Page<Map<String, Object>> page,
+                                              @Param("keyword") String keyword,
+                                              @Param("status") Integer status,
+                                              @Param("role") String role);
 }

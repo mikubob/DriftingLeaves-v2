@@ -15,7 +15,7 @@ import java.io.Serializable;
 /**
  * RSS订阅DTO
  * <p>
- * 昵称与邮箱亦可从 SecurityUser 直接获取，DTO 仅作覆盖可选。
+ * 用户名与邮箱亦可从 SecurityUser 直接获取，DTO 仅作覆盖可选。
  * </p>
  */
 @Data
@@ -27,9 +27,9 @@ public class RssSubscriptionDTO implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    // 昵称（从 sys_user 同步）
-    @Size(max = 15, message = "昵称不能超过15字")
-    private String nickname;
+    // 用户名（从 sys_user 同步）
+    @Size(max = 15, message = "用户名不能超过15字")
+    private String username;
 
     // 邮箱（从 sys_user 同步）
     @NotBlank(message = "邮箱不能为空")

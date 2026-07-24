@@ -40,8 +40,8 @@ public class ArticleComments extends BaseEntity {
     // 父评论 ID,null 是一级评论
     private Long parentId;
 
-    // 父评论昵称
-    private String parentNickname;
+    // 父评论用户名
+    private String parentUsername;
 
     // 评论内容
     private String content;

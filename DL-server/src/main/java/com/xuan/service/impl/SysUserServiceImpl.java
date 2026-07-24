@@ -1,16 +1,28 @@
 package com.xuan.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xuan.constant.MessageConstant;
+import com.xuan.constant.StatusConstant;
 import com.xuan.dto.ProfileAuditDTO;
 import com.xuan.dto.UpdateMeDTO;
+import com.xuan.dto.UserCreateDTO;
+import com.xuan.dto.UserPageQueryDTO;
+import com.xuan.dto.UserUpdateRolesDTO;
+import com.xuan.dto.UserUpdateStatusDTO;
 import com.xuan.entity.SysUser;
 import com.xuan.entity.SysUserProfileAudit;
+import com.xuan.entity.SysUserRole;
 import com.xuan.exception.BaseException;
 import com.xuan.exception.PasswordErrorException;
-import com.xuan.vo.ProfileAuditVO;
 import com.xuan.mapper.SysUserMapper;
 import com.xuan.mapper.SysUserProfileAuditMapper;
+import com.xuan.mapper.SysUserRoleMapper;
+import com.xuan.result.PageResult;
 import com.xuan.service.ISysUserService;
+import com.xuan.util.UsernameGenerator;
+import com.xuan.vo.AdminUserVO;
+import com.xuan.vo.ProfileAuditVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,8 +32,10 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -47,15 +61,23 @@ public class SysUserServiceImpl implements ISysUserService {
 
     private final SysUserMapper sysUserMapper;
     private final SysUserProfileAuditMapper auditMapper;
+    private final SysUserRoleMapper sysUserRoleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final UsernameGenerator usernameGenerator;
 
     // 审核类型
-    private static final int AUDIT_TYPE_NICKNAME = 1;
+    private static final int AUDIT_TYPE_USERNAME = 1;
     private static final int AUDIT_TYPE_AVATAR = 2;
 
     // 冷却期（天）
-    private static final int NICKNAME_COOLDOWN_DAYS = 15;
+    private static final int USERNAME_COOLDOWN_DAYS = 15;
     private static final int AVATAR_COOLDOWN_DAYS = 30;
+
+    // 不允许通过管理端分配的角色
+    private static final Set<String> NON_ASSIGNABLE_ROLES = Set.of("ADMIN");
+
+    // 新增用户默认登录类型：本地
+    private static final int LOGIN_TYPE_LOCAL = 1;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -67,13 +89,7 @@ public class SysUserServiceImpl implements ISysUserService {
 
         boolean changed = false;
 
-        // 1. 修改昵称
-        if (StringUtils.hasText(dto.getNickname()) && !dto.getNickname().equals(user.getNickname())) {
-            user.setNickname(dto.getNickname());
-            changed = true;
-        }
-
-        // 2. 修改邮箱
+        // 1. 修改邮箱
         //    sys_user.email 已有 UNIQUE KEY,且 NULL 不参与唯一性检查(从项目 memory 得知)
         if (StringUtils.hasText(dto.getEmail()) && !dto.getEmail().equals(user.getEmail())) {
             // 校验新邮箱是否已被其他用户占用
@@ -85,7 +101,7 @@ public class SysUserServiceImpl implements ISysUserService {
             changed = true;
         }
 
-        // 3. 修改密码
+        // 2. 修改密码
         //    必须同时提供 oldPassword 和 newPassword,否则忽略密码修改
         boolean hasOld = StringUtils.hasText(dto.getOldPassword());
         boolean hasNew = StringUtils.hasText(dto.getNewPassword());
@@ -112,47 +128,46 @@ public class SysUserServiceImpl implements ISysUserService {
         }
 
         sysUserMapper.updateById(user);
-        log.info("用户资料更新成功: userId={}, changedFields(nickname={},email={},password={})",
+        log.info("用户资料更新成功: userId={}, changedFields(email={},password={})",
                 userId,
-                StringUtils.hasText(dto.getNickname()) && !dto.getNickname().equals(user.getNickname()),
                 StringUtils.hasText(dto.getEmail()),
                 hasOld && hasNew);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void applyNicknameChange(Long userId, String nickname, String clientIp) {
+    public void applyUsernameChange(Long userId, String username, String clientIp) {
         SysUser user = sysUserMapper.selectById(userId);
         if (user == null) {
             throw new BaseException(MessageConstant.ACCOUNT_NOT_FOUND);
         }
-        if (!StringUtils.hasText(nickname)) {
-            throw new BaseException("昵称不能为空");
+        if (!StringUtils.hasText(username)) {
+            throw new BaseException("用户名不能为空");
         }
-        if (nickname.equals(user.getNickname())) {
-            throw new BaseException("新昵称不能与当前昵称相同");
+        if (username.equals(user.getUsername())) {
+            throw new BaseException("新用户名不能与当前用户名相同");
         }
 
         // 存在待审记录则不允许重复提交
-        SysUserProfileAudit pending = auditMapper.selectPendingByUserAndType(userId, AUDIT_TYPE_NICKNAME);
+        SysUserProfileAudit pending = auditMapper.selectPendingByUserAndType(userId, AUDIT_TYPE_USERNAME);
         if (pending != null) {
-            throw new BaseException("昵称修改申请正在审核中，请勿重复提交");
+            throw new BaseException("用户名修改申请正在审核中，请勿重复提交");
         }
 
         // 账号维度 + IP 维度双锁定
-        checkCooldown(userId, clientIp, AUDIT_TYPE_NICKNAME, NICKNAME_COOLDOWN_DAYS, "昵称");
+        checkCooldown(userId, clientIp, AUDIT_TYPE_USERNAME, USERNAME_COOLDOWN_DAYS, "用户名");
 
         SysUserProfileAudit audit = SysUserProfileAudit.builder()
                 .userId(userId)
-                .auditType(AUDIT_TYPE_NICKNAME)
-                .oldValue(user.getNickname())
-                .newValue(nickname)
+                .auditType(AUDIT_TYPE_USERNAME)
+                .oldValue(user.getUsername())
+                .newValue(username)
                 .status(0)
                 .applyTime(LocalDateTime.now())
                 .applyIp(clientIp)
                 .build();
         auditMapper.insert(audit);
-        log.info("昵称修改申请已提交待审核: userId={}, nickname={}, ip={}", userId, nickname, clientIp);
+        log.info("用户名修改申请已提交待审核: userId={}, username={}, ip={}", userId, username, clientIp);
     }
 
     @Override
@@ -198,8 +213,8 @@ public class SysUserServiceImpl implements ISysUserService {
         LocalDateTime now = LocalDateTime.now();
 
         // 账号维度
-        LocalDateTime accountLastTime = auditType == AUDIT_TYPE_NICKNAME
-                ? sysUserMapper.selectById(userId).getNicknameModifyTime()
+        LocalDateTime accountLastTime = auditType == AUDIT_TYPE_USERNAME
+                ? sysUserMapper.selectById(userId).getUsernameModifyTime()
                 : sysUserMapper.selectById(userId).getAvatarModifyTime();
         if (accountLastTime != null) {
             long days = ChronoUnit.DAYS.between(accountLastTime, now);
@@ -249,9 +264,9 @@ public class SysUserServiceImpl implements ISysUserService {
             if (user == null) {
                 throw new BaseException("申请人不存在");
             }
-            if (audit.getAuditType() == AUDIT_TYPE_NICKNAME) {
-                user.setNickname(audit.getNewValue());
-                user.setNicknameModifyTime(now);
+            if (audit.getAuditType() == AUDIT_TYPE_USERNAME) {
+                user.setUsername(audit.getNewValue());
+                user.setUsernameModifyTime(now);
             } else if (audit.getAuditType() == AUDIT_TYPE_AVATAR) {
                 user.setAvatar(audit.getNewValue());
                 user.setAvatarModifyTime(now);
@@ -282,13 +297,13 @@ public class SysUserServiceImpl implements ISysUserService {
 
         return audits.stream().map(audit -> {
             SysUser user = userMap.get(audit.getUserId());
-            String typeName = audit.getAuditType() == AUDIT_TYPE_NICKNAME ? "昵称" : "头像";
+            String typeName = audit.getAuditType() == AUDIT_TYPE_USERNAME ? "用户名" : "头像";
             return ProfileAuditVO.builder()
                     .id(audit.getId())
                     .userId(audit.getUserId())
                     .username(user != null ? user.getUsername() : "")
                     .email(user != null ? user.getEmail() : "")
-                    .currentNickname(user != null ? user.getNickname() : "")
+                    .currentUsername(user != null ? user.getUsername() : "")
                     .currentAvatar(user != null ? user.getAvatar() : "")
                     .auditType(audit.getAuditType())
                     .auditTypeName(typeName)
@@ -298,5 +313,170 @@ public class SysUserServiceImpl implements ISysUserService {
                     .applyIp(audit.getApplyIp())
                     .build();
         }).toList();
+    }
+
+    @Override
+    public PageResult<AdminUserVO> pageUsers(UserPageQueryDTO dto) {
+        Page<Map<String, Object>> page = new Page<>(dto.getPage(), dto.getSize());
+        IPage<Map<String, Object>> result = sysUserMapper.selectUserPage(
+                page, dto.getKeyword(), dto.getStatus(), dto.getRole());
+
+        List<AdminUserVO> records = result.getRecords().stream()
+                .map(this::mapToAdminUserVO)
+                .toList();
+
+        return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    private AdminUserVO mapToAdminUserVO(Map<String, Object> map) {
+        AdminUserVO vo = new AdminUserVO();
+        vo.setId(((Number) map.get("id")).longValue());
+        vo.setUsername((String) map.get("username"));
+        vo.setEmail((String) map.get("email"));
+        vo.setAvatar((String) map.get("avatar"));
+        vo.setStatus(((Number) map.get("status")).intValue());
+        vo.setLoginType(((Number) map.get("login_type")).intValue());
+        vo.setUserType(((Number) map.get("user_type")).intValue());
+        vo.setLastLoginTime((LocalDateTime) map.get("last_login_time"));
+        vo.setLastLoginIp((String) map.get("last_login_ip"));
+        vo.setCreateTime((LocalDateTime) map.get("create_time"));
+        vo.setUpdateTime((LocalDateTime) map.get("update_time"));
+        String rolesStr = (String) map.get("roles");
+        vo.setRoles(StringUtils.hasText(rolesStr)
+                ? Arrays.asList(rolesStr.split(","))
+                : List.of());
+        return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long createUser(UserCreateDTO dto, Long operator) {
+        validateAssignableRoles(dto.getRoles());
+
+        // 邮箱唯一性校验
+        SysUser existByEmail = sysUserMapper.selectByEmail(dto.getEmail());
+        if (existByEmail != null) {
+            throw new BaseException(MessageConstant.EMAIL_EXISTS);
+        }
+
+        // 用户名处理
+        String username = StringUtils.hasText(dto.getUsername())
+                ? dto.getUsername().trim()
+                : usernameGenerator.generate();
+        SysUser existByUsername = sysUserMapper.selectByUsername(username);
+        if (existByUsername != null) {
+            throw new BaseException(MessageConstant.USERNAME_EXISTS);
+        }
+
+        String encodedPassword = passwordEncoder.encode(dto.getPassword());
+
+        SysUser user = SysUser.builder()
+                .username(username)
+                .email(dto.getEmail())
+                .password(encodedPassword)
+                .status(StatusConstant.DISABLE)
+                .loginType(LOGIN_TYPE_LOCAL)
+                .userType(1)
+                .build();
+        sysUserMapper.insert(user);
+
+        bindRoles(user.getId(), dto.getRoles());
+
+        log.info("管理员新增用户: operator={}, userId={}, email={}, username={}",
+                operator, user.getId(), dto.getEmail(), username);
+        return user.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUserStatus(Long userId, Integer status, Long operator) {
+        if (userId.equals(operator)) {
+            throw new BaseException("不能操作自己的账号");
+        }
+        if (status == null || (!status.equals(StatusConstant.ENABLE) && !status.equals(StatusConstant.DISABLE))) {
+            throw new BaseException("状态参数错误");
+        }
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BaseException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+
+        SysUser update = new SysUser();
+        update.setId(userId);
+        update.setStatus(status);
+        sysUserMapper.updateById(update);
+
+        log.info("管理员修改用户状态: operator={}, userId={}, status={}", operator, userId, status);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUserRoles(Long userId, UserUpdateRolesDTO dto, Long operator) {
+        if (userId.equals(operator)) {
+            throw new BaseException("不能操作自己的账号");
+        }
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BaseException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+
+        validateAssignableRoles(dto.getRoles());
+        bindRoles(userId, dto.getRoles());
+
+        log.info("管理员修改用户角色: operator={}, userId={}, roles={}", operator, userId, dto.getRoles());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteUser(Long userId, Long operator) {
+        if (userId.equals(operator)) {
+            throw new BaseException("不能删除自己的账号");
+        }
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BaseException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }
+
+        sysUserMapper.deleteById(userId);
+        log.info("管理员删除用户: operator={}, userId={}", operator, userId);
+    }
+
+    /**
+     * 校验可分配角色：不能包含 ADMIN，且必须都是已存在的角色
+     */
+    private void validateAssignableRoles(List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            throw new BaseException("角色不能为空");
+        }
+        for (String role : roles) {
+            if (!StringUtils.hasText(role)) {
+                throw new BaseException("角色编码不能为空");
+            }
+            String upperRole = role.toUpperCase();
+            if (NON_ASSIGNABLE_ROLES.contains(upperRole)) {
+                throw new BaseException("不允许分配管理员角色");
+            }
+            if (sysUserRoleMapper.selectRoleIdByCode(upperRole) == null) {
+                throw new BaseException("角色不存在: " + role);
+            }
+        }
+    }
+
+    /**
+     * 绑定用户角色：先删除旧角色，再插入新角色
+     */
+    private void bindRoles(Long userId, List<String> roles) {
+        sysUserRoleMapper.deleteByUserId(userId);
+        for (String role : roles) {
+            Long roleId = sysUserRoleMapper.selectRoleIdByCode(role.toUpperCase());
+            if (roleId == null) {
+                throw new BaseException("角色不存在: " + role);
+            }
+            SysUserRole userRole = SysUserRole.builder()
+                    .userId(userId)
+                    .roleId(roleId)
+                    .build();
+            sysUserRoleMapper.insert(userRole);
+        }
     }
 }

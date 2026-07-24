@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 用户资料修改审核记录 VO
+ * 用户名/头像修改审核记录 VO
  */
 @Data
 @Builder
@@ -33,13 +33,13 @@ public class ProfileAuditVO implements Serializable {
     /** 申请人邮箱 */
     private String email;
 
-    /** 申请人当前昵称 */
-    private String currentNickname;
+    /** 申请人当前用户名 */
+    private String currentUsername;
 
     /** 申请人当前头像 */
     private String currentAvatar;
 
-    /** 审核类型：1-昵称 2-头像 */
+    /** 审核类型：1-用户名 2-头像 */
     private Integer auditType;
 
     /** 审核类型名称 */

@@ -6,7 +6,6 @@ import com.xuan.entity.SysUserRole;
 import com.xuan.exception.BaseException;
 import com.xuan.mapper.SysUserMapper;
 import com.xuan.mapper.SysUserRoleMapper;
-import com.xuan.util.RoleNicknameMapper;
 import com.xuan.util.UsernameGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +56,6 @@ import java.util.UUID;
  *    ├─ login_type=2(GitHub) / 3(Gitee)
  *    ├─ username = provider + "_" + oauthId（保证唯一）
  *    ├─ password = 随机 UUID BCrypt 占位（第三方登录不会用到密码）
- *    ├─ nickname = 第三方返回的 name/login，没有则用 username
  *    ├─ email = 第三方返回的 email（可能为空）
  *    ├─ avatar = 第三方返回的 avatar_url
  *    └─ 关联 GUEST 角色
@@ -68,7 +66,6 @@ import java.util.UUID;
  *     <tr><th>字段</th><th>GitHub</th><th>Gitee</th></tr>
  *     <tr><td>用户 ID</td><td>id</td><td>id</td></tr>
  *     <tr><td>用户名</td><td>login</td><td>login</td></tr>
- *     <tr><td>昵称</td><td>name（可能为 null）</td><td>name（可能为 null）</td></tr>
  *     <tr><td>邮箱</td><td>email（私密时为 null）</td><td>email</td></tr>
  *     <tr><td>头像</td><td>avatar_url</td><td>avatar_url</td></tr>
  * </table>
@@ -204,7 +201,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         SysUser sysUser = SysUser.builder()
                 .username(username)
                 .password(encodedPassword)
-                .nickname(RoleNicknameMapper.getNickname(List.of("GUEST")))
                 .email(email)
                 .avatar(avatarUrl)
                 .userType(1)

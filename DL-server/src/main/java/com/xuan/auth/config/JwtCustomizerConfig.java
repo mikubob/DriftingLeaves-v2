@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  * <ul>
  *     <li>{@code roles}：用户角色列表（如 {@code ["ROLE_ADMIN", "ROLE_AUTHOR"]}），供 Resource Server 解析权限</li>
  *     <li>{@code user_id}：用户 ID（Long），供业务代码获取当前用户标识（如操作日志记录）</li>
- *     <li>{@code nickname}：用户昵称，便于前端直接展示，无需再查库</li>
+ *     <li>{@code username}：用户名，便于前端直接展示，无需再查库</li>
  * </ul>
  *
  * <h3>为何要把 user_id 写入 JWT？</h3>
@@ -35,11 +35,11 @@ import java.util.stream.Collectors;
  * <pre>
  * 1. AdminPasswordCodeAuthenticationProvider.authenticate()
  *    └─ 创建 authenticatedToken，principal = SecurityUser
- * 2. OAuth2TokenContext.principal = authenticatedToken
+ *    └─ 提取 userId/username/roles 写入 JWT claims
  * 3. JwtCustomizerConfig.jwtCustomizer() 回调
  *    └─ context.getPrincipal() = authenticatedToken
  *    └─ authenticatedToken.getPrincipal() = SecurityUser
- *    └─ 提取 userId/nickname/roles 写入 JWT claims
+ *    └─ 提取 userId/username/roles 写入 JWT claims
  * 4. JwtGenerator 生成最终 JWT
  * </pre>
  *
@@ -74,15 +74,15 @@ public class JwtCustomizerConfig {
                 // 写入 roles claim，供 Resource Server 的 JwtAuthenticationConverter 解析为 GrantedAuthority
                 context.getClaims().claim("roles", roles);
 
-                // 提取业务用户信息（userId/nickname/email/avatar），写入 JWT claims 供业务代码直接读取
+                // 提取业务用户信息（userId/username/email/avatar），写入 JWT claims 供业务代码直接读取
                 // authentication.getPrincipal() 才是真正的用户对象（SecurityUser）
                 Object principal = authentication.getPrincipal();
                 if (principal instanceof SecurityUser securityUser) {
                     // 用户 ID：业务代码通过 jwt.getClaim("user_id") 获取，避免查库
                     context.getClaims().claim("user_id", securityUser.getUserId());
-                    // 用户昵称：前端展示用，避免额外请求用户信息接口
-                    if (securityUser.getNickname() != null) {
-                        context.getClaims().claim("nickname", securityUser.getNickname());
+                    // 用户名：前端展示用，避免额外请求用户信息接口
+                    if (securityUser.getUsername() != null) {
+                        context.getClaims().claim("username", securityUser.getUsername());
                     }
                     // 邮箱：/me 接口与前端展示用
                     if (securityUser.getEmail() != null) {

@@ -33,7 +33,7 @@ public class RssFeedServiceImpl implements IRssFeedService {
 
         // 获取个人信息作为站点信息
         PersonalInfoVO info = personalInfoService.getPersonalInfo();
-        String siteName = info != null && info.getNickname() != null ? info.getNickname() + "的博客" : "DriftingLeaves Blog";
+        String siteName = info != null && info.getUsername() != null ? info.getUsername() + "的博客" : "DriftingLeaves Blog";
         String siteDescription = info != null && info.getDescription() != null ? info.getDescription() : "个人博客";
 
         // 获取最新20篇已发布文章

@@ -13,7 +13,6 @@ import com.xuan.mapper.SysUserRoleMapper;
 import com.xuan.service.AsyncEmailService;
 import com.xuan.service.BlogUserService;
 import com.xuan.service.EmailCodeService;
-import com.xuan.util.RoleNicknameMapper;
 import com.xuan.util.UsernameGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -127,7 +125,6 @@ public class BlogUserServiceImpl implements BlogUserService {
         SysUser sysUser = SysUser.builder()
                 .username(username)
                 .password(encodedPassword)
-                .nickname(RoleNicknameMapper.getNickname(List.of("GUEST")))
                 .email(email)
                 .userType(1)
                 .status(1)

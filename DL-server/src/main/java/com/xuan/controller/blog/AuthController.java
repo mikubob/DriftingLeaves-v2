@@ -1,7 +1,7 @@
 package com.xuan.controller.blog;
 
 import com.xuan.annotation.RateLimit;
-import com.xuan.dto.ApplyNicknameDTO;
+import com.xuan.dto.ApplyUsernameDTO;
 import com.xuan.dto.RegisterDTO;
 import com.xuan.dto.SendEmailCodeDTO;
 import com.xuan.entity.SysUser;
@@ -63,7 +63,7 @@ public class AuthController {
     private final SysUserMapper sysUserMapper;
     private final SysUserProfileAuditMapper auditMapper;
 
-    private static final int AUDIT_TYPE_NICKNAME = 1;
+    private static final int AUDIT_TYPE_USERNAME = 1;
     private static final int AUDIT_TYPE_AVATAR = 2;
 
     /**
@@ -133,17 +133,16 @@ public class AuthController {
                 .map(r -> r.startsWith("ROLE_") ? r.substring(5) : r)
                 .toList();
 
-        SysUserProfileAudit pendingNickname = auditMapper.selectPendingByUserAndType(userId, AUDIT_TYPE_NICKNAME);
+        SysUserProfileAudit pendingUsername = auditMapper.selectPendingByUserAndType(userId, AUDIT_TYPE_USERNAME);
         SysUserProfileAudit pendingAvatar = auditMapper.selectPendingByUserAndType(userId, AUDIT_TYPE_AVATAR);
 
         CurrentUserVO vo = CurrentUserVO.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
-                .nickname(user.getNickname())
                 .email(user.getEmail())
                 .avatar(user.getAvatar())
                 .roles(roles)
-                .pendingNickname(pendingNickname != null ? pendingNickname.getNewValue() : null)
+                .pendingUsername(pendingUsername != null ? pendingUsername.getNewValue() : null)
                 .pendingAvatar(pendingAvatar != null ? pendingAvatar.getNewValue() : null)
                 .build();
 
@@ -151,17 +150,17 @@ public class AuthController {
     }
 
     /**
-     * 申请修改昵称
+     * 申请修改用户名
      */
-    @PostMapping("/me/nickname")
+    @PostMapping("/me/username")
     @PreAuthorize("hasRole('GUEST')")
-    public Result<String> applyNickname(@AuthenticationPrincipal Jwt jwt,
-                                        @Valid @RequestBody ApplyNicknameDTO dto,
+    public Result<String> applyUsername(@AuthenticationPrincipal Jwt jwt,
+                                        @Valid @RequestBody ApplyUsernameDTO dto,
                                         HttpServletRequest request) {
         Long userId = jwt.getClaim("user_id");
         String clientIp = IpUtil.getClientIp(request);
-        sysUserService.applyNicknameChange(userId, dto.getNickname(), clientIp);
-        return Result.success("昵称修改申请已提交，审核通过前仍显示旧昵称");
+        sysUserService.applyUsernameChange(userId, dto.getUsername(), clientIp);
+        return Result.success("用户名修改申请已提交，审核通过前仍显示旧用户名");
     }
 
     /**

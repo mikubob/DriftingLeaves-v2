@@ -33,9 +33,9 @@ public class ArticleCommentDTO implements Serializable {
     // 父评论ID
     private Long parentId;
 
-    // 父评论昵称
-    @Size(max = 15, message = "父评论昵称不能超过15字")
-    private String parentNickname;
+    // 父评论用户名
+    @Size(max = 15, message = "父评论用户名不能超过15字")
+    private String parentUsername;
 
     // 评论内容
     @NotBlank(message = "评论内容不能为空")

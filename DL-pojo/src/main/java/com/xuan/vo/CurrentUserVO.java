@@ -40,14 +40,9 @@ public class CurrentUserVO implements Serializable {
     private Long userId;
 
     /**
-     * 用户名(登录账号)
+     * 用户名(登录账号/对外展示名)
      */
     private String username;
-
-    /**
-     * 昵称
-     */
-    private String nickname;
 
     /**
      * 邮箱
@@ -65,9 +60,9 @@ public class CurrentUserVO implements Serializable {
     private List<String> roles;
 
     /**
-     * 待审核昵称（null 表示无待审）
+     * 待审核用户名（null 表示无待审）
      */
-    private String pendingNickname;
+    private String pendingUsername;
 
     /**
      * 待审核头像（null 表示无待审）

@@ -29,8 +29,8 @@ public class RssSubscriptionQueryVO implements Serializable {
     // 订阅ID
     private Long id;
 
-    // 昵称
-    private String nickname;
+    // 用户名
+    private String username;
 
     // 订阅邮箱
     private String email;

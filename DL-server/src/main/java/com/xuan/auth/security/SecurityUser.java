@@ -32,7 +32,6 @@ public class SecurityUser implements UserDetails, Serializable {
     private String username;
     private String password;
     private Integer userType;
-    private String nickname;
     // 邮箱:供 /me 接口、JWT claims 使用
     private String email;
     // 头像 URL:供 /me 接口、JWT claims 使用
@@ -45,11 +44,10 @@ public class SecurityUser implements UserDetails, Serializable {
             @JsonProperty("username") String username,
             @JsonProperty("password") String password,
             @JsonProperty("userType") Integer userType,
-            @JsonProperty("nickname") String nickname,
             @JsonProperty("email") String email,
             @JsonProperty("avatar") String avatar,
             @JsonProperty("authorities") Collection<? extends GrantedAuthority> authorities) {
-        return new SecurityUser(userId, username, password, userType, nickname, email, avatar, authorities);
+        return new SecurityUser(userId, username, password, userType, email, avatar, authorities);
     }
 
     @Override

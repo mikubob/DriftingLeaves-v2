@@ -455,7 +455,7 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
         for (ArticleCommentVO comment : comments) {
             SysUser user = userMap.get(comment.getUserId());
             if (user != null) {
-                comment.setNickname(user.getNickname());
+                comment.setUsername(user.getUsername());
                 comment.setAvatar(user.getAvatar());
             }
         }
@@ -498,11 +498,11 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
      * </p>
      *
      * @param parentId 父评论 ID
-     * @param replyNickname 回复者昵称
+     * @param replyUsername 回复者用户名
      * @param replyContent 回复内容
      * @param type 通知类型
      */
-    private void notifyParentIfNeeded(Long parentId, String replyNickname, String replyContent, String type) {
+    private void notifyParentIfNeeded(Long parentId, String replyUsername, String replyContent, String type) {
         if (parentId == null) {
             return;
         }
@@ -532,9 +532,9 @@ public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper,
             // 异步发送回复通知邮件
             asyncEmailService.sendReplyNotificationAsync(
                     parentUser.getEmail(),
-                    parentUser.getNickname(),
+                    parentUser.getUsername(),
                     parentComment.getContent(),
-                    replyNickname,
+                    replyUsername,
                     replyContent,
                     type
             );

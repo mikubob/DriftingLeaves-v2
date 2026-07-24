@@ -34,9 +34,9 @@ public class MessageDTO implements Serializable {
     // 父留言ID,null是一级留言
     private Long parentId;
 
-    // 父留言昵称
-    @Size(max = 15, message = "父留言昵称不能超过15字")
-    private String parentNickname;
+    // 父留言用户名
+    @Size(max = 15, message = "父留言用户名不能超过15字")
+    private String parentUsername;
 
     // 是否使用markdown，0-否，1-是
     private Integer isMarkdown;

@@ -21,21 +21,21 @@ public class AsyncEmailServiceImpl implements AsyncEmailService {
      * 异步发送评论/留言恢复通知邮件
      *
      * @param toEmail        接收者邮箱
-     * @param parentNickname 父级昵称
+     * @param parentUsername 父级用户名
      * @param parentContent  父级内容
-     * @param replyNickname  回复者昵称
+     * @param replyUsername  回复者用户名
      * @param replyContent   回复内容
      * @param type           通知类型
      */
     @Override
     @Async("taskExecutor")
-    public void sendReplyNotificationAsync(String toEmail, String parentNickname, String parentContent, String replyNickname, String replyContent, String type) {
+    public void sendReplyNotificationAsync(String toEmail, String parentUsername, String parentContent, String replyUsername, String replyContent, String type) {
         try {
             emailService.sendReplyNotification(
                     toEmail
-                    , parentNickname
+                    , parentUsername
                     , parentContent
-                    , replyNickname
+                    , replyUsername
                     , replyContent
                     , type
             );
@@ -47,18 +47,18 @@ public class AsyncEmailServiceImpl implements AsyncEmailService {
     /**
      * 异步发送新文章通知邮件
      * @param toEmail 接收者邮箱
-     * @param nickname 昵称
+     * @param username 用户名
      * @param articleTitle 文章标题
      * @param articleSummary 文章摘要
      * @param articleUrl 文章链接
      */
     @Override
     @Async("taskExecutor")
-    public void sendNewArticleNotificationAsync(String toEmail, String nickname, String articleTitle, String articleSummary, String articleUrl) {
+    public void sendNewArticleNotificationAsync(String toEmail, String username, String articleTitle, String articleSummary, String articleUrl) {
         try {
             emailService.sendNewArticleNotification(
                     toEmail
-                    , nickname
+                    , username
                     , articleTitle
                     , articleSummary
                     , articleUrl

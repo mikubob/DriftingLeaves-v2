@@ -383,7 +383,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
         for (MessageVO msg : messages) {
             SysUser user = userMap.get(msg.getUserId());
             if (user != null) {
-                msg.setNickname(user.getNickname());
+                msg.setUsername(user.getUsername());
                 msg.setAvatar(user.getAvatar());
             }
         }
@@ -398,11 +398,11 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
      * </p>
      *
      * @param parentId      父留言ID
-     * @param replyNickname 回复者昵称
+     * @param replyUsername 回复者用户名
      * @param replyContent  回复内容
      * @param type          类型
      */
-    private void notifyParentIfNeeded(Long parentId, String replyNickname, String replyContent, String type) {
+    private void notifyParentIfNeeded(Long parentId, String replyUsername, String replyContent, String type) {
         //1.判空校验
         if (parentId == null) {
             return;
@@ -433,9 +433,9 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Messages> imp
             //5.异步发送回复通知邮件
             asyncEmailService.sendReplyNotificationAsync(
                     parentUser.getEmail(),
-                    parentUser.getNickname(),
+                    parentUser.getUsername(),
                     parentMessage.getContent(),
-                    replyNickname,
+                    replyUsername,
                     replyContent,
                     type
             );

@@ -22,8 +22,8 @@ public class RssSubscriptionStatusVO implements Serializable {
     /** 是否已订阅 */
     private boolean subscribed;
 
-    /** 订阅时使用的昵称 */
-    private String nickname;
+    /** 订阅时使用的用户名 */
+    private String username;
 
     /** 订阅时使用的邮箱 */
     private String email;

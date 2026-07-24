@@ -11,21 +11,21 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 申请修改昵称 DTO
+ * 申请修改用户名 DTO
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApplyNicknameDTO implements Serializable {
+public class ApplyUsernameDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 新昵称
+     * 新用户名
      */
-    @NotBlank(message = "昵称不能为空")
-    @Size(max = 50, message = "昵称长度不能超过 50 个字符")
-    private String nickname;
+    @NotBlank(message = "用户名不能为空")
+    @Size(max = 64, message = "用户名长度不能超过 64 个字符")
+    private String username;
 }

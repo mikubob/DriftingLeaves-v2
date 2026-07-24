@@ -22,4 +22,11 @@ public interface SysUserRoleMapper extends BaseMapper<SysUserRole> {
      * </p>
      */
     Long selectRoleIdByCode(@Param("roleCode") String roleCode);
+
+    /**
+     * 删除指定用户的所有角色关联
+     *
+     * @param userId 用户 ID
+     */
+    int deleteByUserId(@Param("userId") Long userId);
 }

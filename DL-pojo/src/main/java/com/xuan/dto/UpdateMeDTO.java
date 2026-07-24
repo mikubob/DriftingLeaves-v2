@@ -20,7 +20,6 @@ import java.io.Serializable;
  * <ul>
  *     <li>修改密码:必须同时提供 {@code oldPassword} 和 {@code newPassword},后端校验旧密码</li>
  *     <li>修改邮箱:校验新邮箱唯一性(sys_user.email 已有 UNIQUE KEY)</li>
- *     <li>修改昵称:直接入库</li>
  *     <li>修改密码或邮箱后,建议前端主动重新登录获取新 token(JWT 不可变,旧 token 字段过期)</li>
  * </ul>
  *
@@ -34,12 +33,6 @@ public class UpdateMeDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 新昵称(可选)
-     */
-    @Size(max = 50, message = "昵称长度不能超过 50 个字符")
-    private String nickname;
 
     /**
      * 新邮箱(可选)

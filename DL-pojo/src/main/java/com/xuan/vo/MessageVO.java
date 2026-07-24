@@ -32,8 +32,8 @@ public class MessageVO implements Serializable {
     // 父留言ID
     private Long parentId;
 
-    // 回复对象昵称
-    private String parentNickname;
+    // 回复对象用户名
+    private String parentUsername;
 
     // 留言内容
     private String content;
@@ -47,8 +47,8 @@ public class MessageVO implements Serializable {
     // 留言用户ID
     private Long userId;
 
-    // 留言用户昵称
-    private String nickname;
+    // 留言用户名
+    private String username;
 
     // 留言用户头像
     private String avatar;

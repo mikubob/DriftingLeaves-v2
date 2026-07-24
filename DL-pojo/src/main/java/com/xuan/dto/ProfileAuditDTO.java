@@ -11,7 +11,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 管理员审核用户昵称/头像修改申请 DTO
+ * 管理员审核用户名/头像修改申请 DTO
  */
 @Data
 @Builder

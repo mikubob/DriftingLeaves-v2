@@ -29,8 +29,8 @@ public class MessageQueryVO implements Serializable {
     // 根留言ID
     private Long rootId;
 
-    // 回复对象昵称
-    private String parentNickname;
+    // 回复对象用户名
+    private String parentUsername;
 
     // 留言内容（纯文本）
     private String content;

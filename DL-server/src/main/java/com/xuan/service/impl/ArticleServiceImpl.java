@@ -611,7 +611,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             for (RssSubscriptions subscriber : subscribers) {
                 asyncEmailService.sendNewArticleNotificationAsync(
                         subscriber.getEmail(),
-                        subscriber.getNickname() != null ? subscriber.getNickname() : "订阅者",
+                        subscriber.getUsername() != null ? subscriber.getUsername() : "订阅者",
                         article.getTitle(),
                         article.getSummary(),
                         articleUrl

@@ -35,8 +35,8 @@ public class ArticleCommentVO implements Serializable {
     // 父评论ID
     private Long parentId;
 
-    // 回复对象昵称
-    private String parentNickname;
+    // 回复对象用户名
+    private String parentUsername;
 
     // 评论内容
     private String content;
@@ -50,8 +50,8 @@ public class ArticleCommentVO implements Serializable {
     // 评论用户ID
     private Long userId;
 
-    // 评论用户昵称
-    private String nickname;
+    // 评论用户名
+    private String username;
 
     // 评论用户头像
     private String avatar;

@@ -109,8 +109,8 @@ public class EmailTemplateUtil {
     /**
      * 构建回复通知邮件内容
      */
-    public static String buildReplyNotificationEmailContent(String parentNickname, String parentContent,
-                                                      String replyNickname, String replyContent, String typeText, WebsiteProperties websiteProperties) {
+    public static String buildReplyNotificationEmailContent(String parentUsername, String parentContent,
+                                                      String replyUsername, String replyContent, String typeText, WebsiteProperties websiteProperties) {
         String year = String.valueOf(LocalDate.now().getYear());
         return "<!DOCTYPE html>" +
                 "<html lang='zh-CN'>" +
@@ -135,14 +135,14 @@ public class EmailTemplateUtil {
                 "            <p style='color: #bbb; margin: 8px 0 0; font-size: 14px;'>—— " + typeText + "回复通知 ——</p>" +
                 "        </div>" +
                 "        <div class='email-content'>" +
-                "            <h2 style='color: #333; margin: 0 0 20px; font-size: 20px; font-weight: 500;'>" + parentNickname + "，您好！</h2>" +
-                "            <p style='color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 16px;'>您的" + typeText + "收到了来自 <strong>" + replyNickname + "</strong> 的回复：</p>" +
+                "            <h2 style='color: #333; margin: 0 0 20px; font-size: 20px; font-weight: 500;'>" + parentUsername + "，您好！</h2>" +
+                "            <p style='color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 16px;'>您的" + typeText + "收到了来自 <strong>" + replyUsername + "</strong> 的回复：</p>" +
                 "            <div class='quote-block'>" +
                 "                <p style='color: #888; margin: 0 0 6px; font-size: 13px;'>您的原始内容：</p>" +
                 "                <p style='color: #555; margin: 0; font-size: 14px; line-height: 1.6;'>" + parentContent + "</p>" +
                 "            </div>" +
                 "            <div class='reply-block'>" +
-                "                <p style='color: #666; margin: 0 0 6px; font-size: 13px;'>" + replyNickname + " 的回复：</p>" +
+                "                <p style='color: #666; margin: 0 0 6px; font-size: 13px;'>" + replyUsername + " 的回复：</p>" +
                 "                <p style='color: #333; margin: 0; font-size: 14px; line-height: 1.6;'>" + replyContent + "</p>" +
                 "            </div>" +
                 "        </div>" +
@@ -157,7 +157,7 @@ public class EmailTemplateUtil {
     /**
      * 构建新文章通知邮件内容
      */
-    public static String buildNewArticleNotificationEmailContent(String nickname, String articleTitle,
+    public static String buildNewArticleNotificationEmailContent(String username, String articleTitle,
                                                            String articleSummary, String articleUrl, WebsiteProperties websiteProperties) {
         String year = String.valueOf(LocalDate.now().getYear());
         return "<!DOCTYPE html>" +
@@ -183,7 +183,7 @@ public class EmailTemplateUtil {
                 "            <p style='color: #bbb; margin: 8px 0 0; font-size: 14px;'>—— 新文章发布通知 ——</p>" +
                 "        </div>" +
                 "        <div class='email-content'>" +
-                "            <h2 style='color: #333; margin: 0 0 20px; font-size: 20px; font-weight: 500;'>" + nickname + "，您好！</h2>" +
+                "            <h2 style='color: #333; margin: 0 0 20px; font-size: 20px; font-weight: 500;'>" + username + "，您好！</h2>" +
                 "            <p style='color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 16px;'>您订阅的博客有新文章发布了：</p>" +
                 "            <div class='article-card'>" +
                 "                <h3 style='color: #333; margin: 0 0 12px; font-size: 18px; font-weight: 600;'>" + articleTitle + "</h3>" +

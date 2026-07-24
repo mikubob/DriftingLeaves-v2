@@ -5,7 +5,7 @@
 
     <!-- 分页查询评论列表，并返回文章标题 -->
     <select id="pageQueryWithArticleTitle" resultType="com.xuan.vo.ArticleCommentQueryVO">
-        SELECT c.id, c.article_id, c.root_id, c.parent_nickname, c.content, c.content_html,
+        SELECT c.id, c.article_id, c.root_id, c.parent_username, c.content, c.content_html,
                c.user_id, c.location, c.user_agent_os, c.user_agent_browser,
                c.is_approved, c.is_admin_reply, c.create_time, a.title AS article_title
         FROM article_comments c

@@ -30,9 +30,9 @@ public class MessageReplyDTO implements Serializable {
     // 根留言ID
     private Long rootId;
 
-    // 父留言昵称
-    @Size(max = 30, message = "父留言昵称不能超过30字")
-    private String parentNickname;
+    // 父留言用户名
+    @Size(max = 30, message = "父留言用户名不能超过30字")
+    private String parentUsername;
 
     // 回复内容
     @NotBlank(message = "回复内容不能为空")

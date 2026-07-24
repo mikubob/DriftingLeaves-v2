@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 管理端用户资料修改审核接口
+ * 管理端用户名/头像修改审核接口
  */
 @RestController("adminUserProfileAuditController")
 @RequestMapping("/admin/user/profile-audit")
@@ -31,7 +31,7 @@ public class UserProfileAuditController {
     private final ISysUserService sysUserService;
 
     /**
-     * 查询所有待审核的用户资料修改申请
+     * 查询所有待审核的用户名/头像修改申请
      */
     @GetMapping("/pending")
     public Result<List<ProfileAuditVO>> listPending() {
@@ -39,7 +39,7 @@ public class UserProfileAuditController {
     }
 
     /**
-     * 审核用户昵称/头像修改申请
+     * 审核用户名/头像修改申请
      */
     @PostMapping("/audit")
     public Result<String> audit(@Valid @RequestBody ProfileAuditDTO dto,

@@ -48,14 +48,14 @@ public class RssSubscriptionServiceImpl extends ServiceImpl<RssSubscriptionMappe
             }
             // 如果已存在但未激活，重新激活
             existingSubscription.setIsActive(1);
-            existingSubscription.setNickname(rssSubscriptionDTO.getNickname());
+            existingSubscription.setUsername(rssSubscriptionDTO.getUsername());
             existingSubscription.setUnSubscribeTime(null);
             updateById(existingSubscription);
         } else {
             // 新增订阅
             RssSubscriptions rssSubscriptions = RssSubscriptions.builder()
                     .userId(userId)
-                    .nickname(rssSubscriptionDTO.getNickname())
+                    .username(rssSubscriptionDTO.getUsername())
                     .email(rssSubscriptionDTO.getEmail())
                     .isActive(1)
                     .subscribeTime(LocalDateTime.now())
@@ -187,7 +187,7 @@ public class RssSubscriptionServiceImpl extends ServiceImpl<RssSubscriptionMappe
         // 返回订阅详情
         return RssSubscriptionStatusVO.builder()
                 .subscribed(true)
-                .nickname(sub.getNickname())
+                .username(sub.getUsername())
                 .email(sub.getEmail())
                 .build();
     }

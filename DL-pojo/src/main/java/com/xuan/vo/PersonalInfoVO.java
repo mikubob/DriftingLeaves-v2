@@ -23,8 +23,8 @@ public class PersonalInfoVO implements Serializable {
     // 个人信息ID
     private Long id;
 
-    // 昵称
-    private String nickname;
+    // 用户名（对外展示名）
+    private String username;
 
     // 标签
     private String tag;

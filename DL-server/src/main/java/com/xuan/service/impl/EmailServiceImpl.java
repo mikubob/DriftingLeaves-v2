@@ -46,14 +46,14 @@ public class EmailServiceImpl implements EmailService {
     /**
      * 发送回复通知
      * @param toEmail 收件人邮箱
-     * @param parentNickname 被回复人昵称
+     * @param parentUsername 被回复人用户名
      * @param parentContent 被回复的内容
-     * @param replyNickname 回复人昵称
+     * @param replyUsername 回复人用户名
      * @param replyContent 回复内容
      * @param type 类型：message-留言 / comment-文章评论
      */
     @Override
-    public void sendReplyNotification(String toEmail, String parentNickname, String parentContent, String replyNickname, String replyContent, String type) {
+    public void sendReplyNotification(String toEmail, String parentUsername, String parentContent, String replyUsername, String replyContent, String type) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -61,8 +61,8 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(toEmail);
             String typeText = "comment".equals(type) ? "文章评论" : "留言";
             helper.setSubject(websiteProperties.getTitle() + " - 您的" + typeText + "收到了新回复");
-            helper.setText(EmailTemplateUtil.buildReplyNotificationEmailContent(parentNickname, parentContent,
-                    replyNickname, replyContent, typeText, websiteProperties), true);
+            helper.setText(EmailTemplateUtil.buildReplyNotificationEmailContent(parentUsername, parentContent,
+                    replyUsername, replyContent, typeText, websiteProperties), true);
             mailSender.send(message);
             log.info("发送回复通知邮件成功: to={}, type={}", toEmail, type);
         } catch (Exception e) {
@@ -73,20 +73,20 @@ public class EmailServiceImpl implements EmailService {
     /**
      * 发送新文章通知
      * @param toEmail 收件人邮箱
-     * @param nickname 订阅者昵称
+     * @param username 订阅者用户名
      * @param articleTitle 文章标题
      * @param articleSummary 文章摘要
      * @param articleUrl 文章链接
      */
     @Override
-    public void sendNewArticleNotification(String toEmail, String nickname, String articleTitle, String articleSummary, String articleUrl) {
+    public void sendNewArticleNotification(String toEmail, String username, String articleTitle, String articleSummary, String articleUrl) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(emailProperties.getFrom(), emailProperties.getPersonal());
             helper.setTo(toEmail);
             helper.setSubject(websiteProperties.getTitle() + " - 新文章发布：" + articleTitle);
-            helper.setText(EmailTemplateUtil.buildNewArticleNotificationEmailContent(nickname, articleTitle, articleSummary, articleUrl, websiteProperties), true);
+            helper.setText(EmailTemplateUtil.buildNewArticleNotificationEmailContent(username, articleTitle, articleSummary, articleUrl, websiteProperties), true);
             mailSender.send(message);
             log.info("发送新文章通知邮件成功: to={}, title={}", toEmail, articleTitle);
         } catch (Exception e) {

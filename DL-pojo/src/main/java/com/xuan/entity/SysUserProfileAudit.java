@@ -14,7 +14,7 @@ import java.io.Serial;
 import java.time.LocalDateTime;
 
 /**
- * 用户昵称/头像修改审核
+ * 用户名/头像修改审核
  */
 @Data
 @Builder
@@ -33,7 +33,7 @@ public class SysUserProfileAudit extends BaseEntity {
     // 申请人ID
     private Long userId;
 
-    // 审核类型：1-昵称 2-头像
+    // 审核类型：1-用户名 2-头像
     private Integer auditType;
 
     // 原值

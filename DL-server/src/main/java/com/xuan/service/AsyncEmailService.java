@@ -8,13 +8,13 @@ public interface AsyncEmailService {
     /**
      * 异步发送评论/留言回复通知邮件
      */
-    void sendReplyNotificationAsync(String toEmail, String parentNickname, String parentContent,
-                                    String replyNickname, String replyContent, String type);
+    void sendReplyNotificationAsync(String toEmail, String parentUsername, String parentContent,
+                                    String replyUsername, String replyContent, String type);
 
     /**
      * 异步发送新文章通知邮件
      */
-    void sendNewArticleNotificationAsync(String toEmail, String nickname, String articleTitle,
+    void sendNewArticleNotificationAsync(String toEmail, String username, String articleTitle,
                                          String articleSummary, String articleUrl);
 
     /**

@@ -76,7 +76,7 @@ import java.util.Map;
  * <ul>
  *     <li>改用 {@link OAuth2TokenGenerator} 生成 access_token + refresh_token</li>
  *     <li>access_token 经 JwtGenerator 生成,会自动调用 {@link com.xuan.auth.config.JwtCustomizerConfig}
- *         注入 roles/user_id/nickname/email/avatar claims(与其他 grant_type 保持一致)</li>
+ *         注入 roles/user_id/username/email/avatar claims(与其他 grant_type 保持一致)</li>
  *     <li>refresh_token 经 OAuth2RefreshTokenGenerator 生成(不透明随机字符串,7 天有效)</li>
  *     <li>通过 {@link OAuth2AuthorizationService#save} 持久化授权记录到 oauth2_authorization 表</li>
  *     <li>Authorization 中存储 Principal attribute(供 refresh 时 JwtCustomizerConfig 重新注入 claims)</li>
@@ -285,7 +285,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 localUser.getUsername(),
                 localUser.getPassword(),
                 localUser.getUserType(),
-                localUser.getNickname(),
                 localUser.getEmail(),
                 localUser.getAvatar(),
                 authorities

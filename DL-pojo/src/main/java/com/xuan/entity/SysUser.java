@@ -30,14 +30,11 @@ public class SysUser extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    // 用户名/登录账号
+    // 用户名/登录账号（同时作为对外展示名）
     private String username;
 
     // 密码（BCrypt加密）
     private String password;
-
-    // 昵称
-    private String nickname;
 
     // 邮箱
     private String email;
@@ -66,8 +63,8 @@ public class SysUser extends BaseEntity {
     // 最后登录IP
     private String lastLoginIp;
 
-    // 昵称最后修改时间（半个月内只能修改一次）
-    private LocalDateTime nicknameModifyTime;
+    // 用户名最后修改时间（半个月内只能修改一次）
+    private LocalDateTime usernameModifyTime;
 
     // 头像最后修改时间（一个月内只能修改一次）
     private LocalDateTime avatarModifyTime;

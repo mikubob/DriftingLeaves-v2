@@ -32,8 +32,8 @@ public class RssSubscriptions implements Serializable {
     // 用户ID
     private Long userId;
 
-    // 昵称（从 sys_user 同步）
-    private String nickname;
+    // 用户名（从 sys_user 同步）
+    private String username;
 
     // 邮箱（从 sys_user 同步）
     private String email;

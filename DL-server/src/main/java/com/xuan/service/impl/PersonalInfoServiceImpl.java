@@ -48,8 +48,8 @@ public class PersonalInfoServiceImpl extends ServiceImpl<PersonalInfoMapper, Per
     public void updatePersonalInfo(PersonalInfoDTO personalInfoDTO) {
         LambdaUpdateWrapper<PersonalInfo> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(PersonalInfo::getId, personalInfoDTO.getId());
-        if (personalInfoDTO.getNickname() != null) {
-            updateWrapper.set(PersonalInfo::getNickname, personalInfoDTO.getNickname());
+        if (personalInfoDTO.getUsername() != null) {
+            updateWrapper.set(PersonalInfo::getUsername, personalInfoDTO.getUsername());
         }
         if (personalInfoDTO.getTag() != null) {
             updateWrapper.set(PersonalInfo::getTag, personalInfoDTO.getTag());

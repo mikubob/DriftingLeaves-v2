@@ -41,8 +41,8 @@ public class Messages extends BaseEntity {
     // 父留言 ID,null 是一级留言
     private Long parentId;
 
-    // 父留言昵称
-    private String parentNickname;
+    // 父留言用户名
+    private String parentUsername;
 
     // 留言用户ID
     private Long userId;

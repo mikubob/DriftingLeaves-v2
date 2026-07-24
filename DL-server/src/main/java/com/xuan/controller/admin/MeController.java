@@ -82,7 +82,6 @@ public class MeController {
         CurrentUserVO vo = CurrentUserVO.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
-                .nickname(user.getNickname())
                 .email(user.getEmail())
                 .avatar(user.getAvatar())
                 .roles(roles)
@@ -102,9 +101,8 @@ public class MeController {
      * <ul>
      *     <li>所有字段可选,只传需要修改的项</li>
      *     <li>修改密码:必须同时提供 {@code oldPassword} 和 {@code newPassword},后端校验旧密码</li>
-     *     <li>修改邮箱:校验新邮箱唯一性(sys_user.email 已有 UNIQUE KEY)</li>
-     *     <li>修改昵称:直接入库</li>
-     * </ul>
+ *     <li>修改邮箱:校验新邮箱唯一性(sys_user.email 已有 UNIQUE KEY)</li>
+ * </ul>
      *
      * <h3>前端提示</h3>
      * <p>
